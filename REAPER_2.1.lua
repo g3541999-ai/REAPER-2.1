@@ -15,7 +15,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = Library:CreateWindow({
-    Title = "🌗 REAPER 2.1",
+    Title = "🌕 REAPER 2.1",
     Footer = "Powered by Obsidian",
     Size = UDim2.fromOffset(600, 400),
     Center = true,
