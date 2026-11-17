@@ -107,6 +107,37 @@ local function styleObsidian(btn)
     end)
 end
 
+local function addSwitch(btn, initial)
+    local swState = initial and true or false
+    local Pill = create("Frame", {
+        Size = UDim2.fromOffset(34, 18),
+        Position = UDim2.new(1, -10, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundColor3 = swState and Theme.Accent or Theme.Outline,
+        BorderSizePixel = 0,
+    }, nil)
+    Pill.Parent = btn
+    corner(Pill, 9)
+    local Knob = create("Frame", {
+        Size = UDim2.fromOffset(14, 14),
+        Position = swState and UDim2.new(1, -17, 0.5, 0) or UDim2.new(0, 3, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = swState and Color3.fromRGB(15, 15, 15) or Theme.Text,
+        BorderSizePixel = 0,
+    }, nil)
+    Knob.Parent = Pill
+    corner(Knob, 7)
+    local info = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    return function(state)
+        swState = state and true or false
+        TweenService:Create(Pill, info, { BackgroundColor3 = swState and Theme.Accent or Theme.Outline }):Play()
+        TweenService:Create(Knob, info, {
+            Position = swState and UDim2.new(1, -17, 0.5, 0) or UDim2.new(0, 3, 0.5, 0),
+            BackgroundColor3 = swState and Color3.fromRGB(15, 15, 15) or Theme.Text,
+        }):Play()
+    end
+end
+
 local function isMobile()
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
@@ -1280,7 +1311,7 @@ if tabName == "Home" then
     local OpenListButton = create("TextButton", {
         Size = UDim2.new(1, 0, 0, 26),
         BackgroundColor3 = Theme.Main,
-        Text = "Player List: OFF",
+        Text = "Player List",
         TextColor3 = Theme.Text,
         Font = Theme.Font,
         TextSize = 13,
@@ -1290,15 +1321,16 @@ if tabName == "Home" then
     }, nil)
     OpenListButton.Parent = col1.Page
     styleObsidian(OpenListButton)
+    local setOpenList = addSwitch(OpenListButton, false)
     OpenListButton.MouseButton1Click:Connect(function()
         HomeListHolder.Visible = not HomeListHolder.Visible
-        OpenListButton.Text = tr("Player List: ", "Список игроков: ") .. (HomeListHolder.Visible and "ON" or "OFF")
+        setOpenList(HomeListHolder.Visible)
     end)
 
     local LanguageButton = create("TextButton", {
         Size = UDim2.new(1, 0, 0, 26),
         BackgroundColor3 = Theme.Main,
-        Text = "Язык: English",
+        Text = "Language",
         TextColor3 = Theme.Text,
         Font = Theme.Font,
         TextSize = 13,
@@ -1308,9 +1340,10 @@ if tabName == "Home" then
     }, nil)
     LanguageButton.Parent = col1.Page
     styleObsidian(LanguageButton)
+    local setLang = addSwitch(LanguageButton, false)
     LanguageButton.MouseButton1Click:Connect(function()
         langRU = not langRU
-        LanguageButton.Text = langRU and "Язык: Русский" or "Язык: English"
+        setLang(langRU)
         applyLanguage()
     end)
 
@@ -1379,226 +1412,6 @@ if tabName == "Home" then
             end
             ElapsedRow.Text = tr("Elapsed time: ", "Время сессии: ") .. elapsedText
             task.wait(1)
-        end
-    end)
-elseif tabName == "Target" then
-    local selected, highlight, highlightOn, spectating = nil, nil, false, false
-    local rows = {}
-
-    local Info = create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 84),
-        BackgroundColor3 = Theme.Main,
-        BorderSizePixel = 0,
-        Text = "Player not selected",
-        TextColor3 = Theme.Text,
-        Font = Theme.Font,
-        TextSize = 12,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        LayoutOrder = 0,
-    }, nil)
-    Info.Parent = col1.Page
-    corner(Info, 4)
-    stroke(Info)
-    create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), Parent = Info })
-
-    local ListHolder = create("Frame", {
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1,
-        Visible = false,
-        LayoutOrder = 1,
-    }, nil)
-    ListHolder.Parent = col1.Page
-    create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = ListHolder })
-
-    local function clearHighlight()
-        if highlight then
-            pcall(function() highlight:Destroy() end)
-            highlight = nil
-        end
-    end
-
-    local function applyHighlight()
-        clearHighlight()
-        if not highlightOn or not selected or not selected.Character then return end
-        highlight = Instance.new("Highlight")
-        highlight.FillColor = Color3.fromRGB(255, 90, 90)
-        highlight.FillTransparency = 0.65
-        highlight.OutlineColor = Theme.Accent
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.Parent = selected.Character
-    end
-
-    local function stopSpectate()
-        spectating = false
-        pcall(function()
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum then workspace.CurrentCamera.CameraSubject = hum end
-        end)
-    end
-
-    local function setSelected(plr)
-        selected = (selected == plr) and nil or plr
-        applyHighlight()
-        if spectating then stopSpectate() end
-        for plr2, row in pairs(rows) do
-            row.BackgroundColor3 = (plr2 == selected) and Theme.Highlight or Theme.Main
-        end
-    end
-
-    local function addPlayerRow(plr)
-        if plr == LocalPlayer or rows[plr] then return end
-        local Row = create("TextButton", {
-            Size = UDim2.new(1, 0, 0, 32),
-            BackgroundColor3 = Theme.Main,
-            Text = "",
-            AutoButtonColor = true,
-            LayoutOrder = #ListHolder:GetChildren(),
-        }, nil)
-        Row.Parent = ListHolder
-        corner(Row, 4)
-
-        local Label = create("TextLabel", {
-            Size = UDim2.new(1, -16, 1, 0),
-            Position = UDim2.fromOffset(8, 0),
-            BackgroundTransparency = 1,
-            Text = plr.DisplayName .. " (@" .. plr.Name .. ")",
-            TextColor3 = Theme.Text,
-            Font = Theme.Font,
-            TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-        }, nil)
-        Label.Parent = Row
-
-        Row.MouseButton1Click:Connect(function() setSelected(plr) end)
-        rows[plr] = Row
-    end
-
-    local function refreshList()
-        for plr, row in pairs(rows) do
-            if not plr.Parent then
-                row:Destroy()
-                rows[plr] = nil
-            end
-        end
-        for _, plr in ipairs(Players:GetPlayers()) do
-            addPlayerRow(plr)
-        end
-    end
-    refreshList()
-
-    Players.PlayerAdded:Connect(function()
-        task.wait(0.5)
-        refreshList()
-    end)
-    Players.PlayerRemoving:Connect(function(plr)
-        if rows[plr] then
-            rows[plr]:Destroy()
-            rows[plr] = nil
-        end
-        if selected == plr then
-            selected = nil
-            applyHighlight()
-            if spectating then stopSpectate() end
-        end
-    end)
-
-    local ListButton = create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 26),
-        BackgroundColor3 = Theme.Main,
-        Text = "List: OFF",
-        TextColor3 = Theme.Text,
-        Font = Theme.Font,
-        TextSize = 13,
-        AutoButtonColor = false,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = 9997,
-    }, nil)
-    ListButton.Parent = col1.Page
-    styleObsidian(ListButton)
-    ListButton.MouseButton1Click:Connect(function()
-        ListHolder.Visible = not ListHolder.Visible
-        ListButton.Text = tr("List: ", "Список: ") .. (ListHolder.Visible and "ON" or "OFF")
-    end)
-
-    local HighlightBtn = create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 26),
-        BackgroundColor3 = Theme.Main,
-        Text = "Highlight: OFF",
-        TextColor3 = Theme.Text,
-        Font = Theme.Font,
-        TextSize = 13,
-        AutoButtonColor = false,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = 9998,
-    }, nil)
-    HighlightBtn.Parent = col1.Page
-    styleObsidian(HighlightBtn)
-    HighlightBtn.MouseButton1Click:Connect(function()
-        highlightOn = not highlightOn
-        if highlightOn then applyHighlight() else clearHighlight() end
-        HighlightBtn.Text = tr("Highlight: ", "Подсветка: ") .. (highlightOn and "ON" or "OFF")
-    end)
-
-    local SpectateBtn = create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 26),
-        BackgroundColor3 = Theme.Main,
-        Text = "Spectate: OFF",
-        TextColor3 = Theme.Text,
-        Font = Theme.Font,
-        TextSize = 13,
-        AutoButtonColor = false,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = 9999,
-    }, nil)
-    SpectateBtn.Parent = col1.Page
-    styleObsidian(SpectateBtn)
-    SpectateBtn.MouseButton1Click:Connect(function()
-        if spectating then
-            stopSpectate()
-            SpectateBtn.Text = tr("Spectate: ", "Слежка: ") .. "OFF"
-        elseif selected and selected.Character then
-            spectating = true
-            SpectateBtn.Text = tr("Spectate: ", "Слежка: ") .. "ON"
-        else
-            Library:Notify(tr("Select a player first", "Сначала выбери игрока"))
-        end
-    end)
-
-    task.spawn(function()
-        while col1.Page.Parent do
-            if selected and selected.Parent then
-                local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local char = selected.Character
-                local root = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-                local lines = "@" .. selected.Name
-                if myRoot and root then
-                    lines = lines .. "\n" .. tr("Distance: ", "Дистанция: ") .. math.floor((myRoot.Position - root.Position).Magnitude + 0.5) .. " studs"
-                end
-                if hum then
-                    lines = lines .. "\nHP: " .. math.floor(hum.Health + 0.5) .. " / " .. math.floor(hum.MaxHealth + 0.5)
-                end
-                local ping = 0
-                pcall(function() ping = math.floor(selected:GetNetworkPing() * 1000) end)
-                lines = lines .. "\n" .. tr("Ping: ", "Пинг: ") .. ping .. " ms"
-                Info.Text = lines
-
-                if spectating and hum then
-                    workspace.CurrentCamera.CameraSubject = hum
-                end
-                if highlightOn and (not highlight or not highlight.Parent) then
-                    applyHighlight()
-                end
-            else
-                Info.Text = tr("Player not selected", "Игрок не выбран")
-            end
-            task.wait(0.5)
         end
     end)
 elseif tabName == "Visual" then
@@ -1765,7 +1578,7 @@ elseif tabName == "Visual" then
     local VisualMenuButton = create("TextButton", {
         Size = UDim2.new(1, 0, 0, 26),
         BackgroundColor3 = Theme.Main,
-        Text = "Visuals Menu: OFF",
+        Text = "Visuals Menu",
         TextColor3 = Theme.Text,
         Font = Theme.Font,
         TextSize = 13,
@@ -1775,6 +1588,7 @@ elseif tabName == "Visual" then
     }, nil)
     VisualMenuButton.Parent = col1.Page
     styleObsidian(VisualMenuButton)
+    local setVisualsMenu = addSwitch(VisualMenuButton, false)
 
     local VisualListHolder = create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
@@ -1814,9 +1628,10 @@ elseif tabName == "Visual" then
         }, nil)
         Row.Parent = VisualListHolder
         corner(Row, 4)
+        local setSwitch = addSwitch(Row, false)
 
         local Label = create("TextLabel", {
-            Size = UDim2.new(1, -16, 1, 0),
+            Size = UDim2.new(1, -60, 1, 0),
             Position = UDim2.fromOffset(8, 0),
             BackgroundTransparency = 1,
             Text = name,
@@ -1832,13 +1647,13 @@ elseif tabName == "Visual" then
             local newState = not visualState[name]
             visualState[name] = newState
             pcall(setter, newState)
-            Row.BackgroundColor3 = newState and Theme.Highlight or Theme.Main
+            setSwitch(newState)
         end)
     end
 
     VisualMenuButton.MouseButton1Click:Connect(function()
         VisualListHolder.Visible = not VisualListHolder.Visible
-        VisualMenuButton.Text = tr("Visuals Menu: ", "Меню визуалов: ") .. (VisualListHolder.Visible and "ON" or "OFF")
+        setVisualsMenu(VisualListHolder.Visible)
     end)
 
     local desiredFov = (workspace.CurrentCamera and workspace.CurrentCamera.FieldOfView) or 70
