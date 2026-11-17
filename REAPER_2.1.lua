@@ -1,5 +1,5 @@
 -- ==========================================
--- REAPER 2.1 — OBSIDIAN EDITION + SAVITAR SHADERS
+-- SILKY TOUCH 2.3 — OBSIDIAN EDITION + SAVITAR SHADERS
 -- ==========================================
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
@@ -15,7 +15,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = Library:CreateWindow({
-    Title = "<font color=\"#7D55FF\">🌙 REAPER 2.1</font>",
+    Title = "🌙 SILKY TOUCH 2.3",
     Footer = "Powered by Obsidian",
     Size = UDim2.fromOffset(600, 400),
     Center = true,
@@ -124,7 +124,7 @@ HomeGroup:AddDivider()
 HomeGroup:AddButton({
     Text = "Нажми меня",
     Func = function()
-        Library:Notify("Кнопка работает! REAPER + Obsidian = OK")
+        Library:Notify("Кнопка работает! SILKY TOUCH + Obsidian = OK")
     end
 })
 
@@ -137,7 +137,7 @@ HomeGroup:AddToggle("MyToggle", {
 })
 
 -- =====================================================================
--- SAVITAR SHADERS — ДВИЖОК (встроено в REAPER 2.1)
+-- SAVITAR SHADERS — ДВИЖОК (встроено в SILKY TOUCH 2.3)
 -- =====================================================================
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
