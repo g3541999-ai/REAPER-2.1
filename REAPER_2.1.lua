@@ -1219,12 +1219,16 @@ if tabName == "Home" then
     local HomeListHolder = create("Frame", {
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1,
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
         Visible = false,
         LayoutOrder = 2,
     }, nil)
     HomeListHolder.Parent = col1.Page
+    corner(HomeListHolder, 4)
+    stroke(HomeListHolder)
     create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = HomeListHolder })
+    create("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), Parent = HomeListHolder })
 
     local homeRows = {}
     local function addHomeRow(plr)
@@ -1416,163 +1420,11 @@ if tabName == "Home" then
     end)
 elseif tabName == "Visual" then
     local Lighting = game:GetService("Lighting")
-    local origAmbient = Lighting.Ambient
-    local origOutdoor = Lighting.OutdoorAmbient
-    local origBrightness = Lighting.Brightness
-    local origFogEnd = Lighting.FogEnd
-    local origShadows = Lighting.GlobalShadows
     local origClock = Lighting.ClockTime
-    local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
-    local origDensity = atmosphere and atmosphere.Density
-
-    local function setFullbright(on)
-        if on then
-            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-            Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-            Lighting.Brightness = 3
-        else
-            Lighting.Ambient = origAmbient
-            Lighting.OutdoorAmbient = origOutdoor
-            Lighting.Brightness = origBrightness
-        end
-    end
-
-    local function setNoFog(on)
-        if on then
-            Lighting.FogEnd = 100000
-            if atmosphere then atmosphere.Density = 0 end
-        else
-            Lighting.FogEnd = origFogEnd
-            if atmosphere and origDensity then atmosphere.Density = origDensity end
-        end
-    end
-
-    local nightCC = nil
-    local function setNightVision(on)
-        if on and not nightCC then
-            nightCC = Instance.new("ColorCorrectionEffect")
-            nightCC.Name = "REAPER_NightVision"
-            nightCC.TintColor = Color3.fromRGB(120, 255, 120)
-            nightCC.Brightness = 0.15
-            nightCC.Contrast = 0.2
-            nightCC.Saturation = -0.3
-            nightCC.Parent = Lighting
-        elseif not on and nightCC then
-            nightCC:Destroy()
-            nightCC = nil
-        end
-    end
-
-    local boosted = {}
-    local origQuality = nil
-    local function setFpsBoost(on)
-        if on then
-            pcall(function()
-                origQuality = settings().Rendering.QualityLevel
-                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-            end)
-            Lighting.GlobalShadows = false
-            for _, d in ipairs(workspace:GetDescendants()) do
-                if d:IsA("ParticleEmitter") or d:IsA("Smoke") or d:IsA("Fire") or d:IsA("Sparkles") then
-                    boosted[d] = d.Enabled
-                    d.Enabled = false
-                end
-            end
-        else
-            pcall(function()
-                if origQuality then settings().Rendering.QualityLevel = origQuality end
-            end)
-            Lighting.GlobalShadows = origShadows
-            for d, was in pairs(boosted) do
-                pcall(function() d.Enabled = was end)
-            end
-            boosted = {}
-        end
-    end
-
-    local crosshair = nil
-    local function setCrosshair(on)
-        if on and not crosshair then
-            crosshair = create("Frame", {
-                Size = UDim2.fromOffset(20, 20),
-                Position = UDim2.new(0.5, 0, 0.5, 0),
-                AnchorPoint = Vector2.new(0.5, 0.5),
-                BackgroundTransparency = 1,
-                Parent = ScreenGui,
-            })
-            create("Frame", { Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 0.5, -1), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = crosshair })
-            create("Frame", { Size = UDim2.new(0, 2, 1, 0), Position = UDim2.new(0.5, -1, 0, 0), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = crosshair })
-        elseif not on and crosshair then
-            crosshair:Destroy()
-            crosshair = nil
-        end
-    end
-
-    local blur = nil
-    local function setBlur(on)
-        if on and not blur then
-            blur = Instance.new("BlurEffect")
-            blur.Name = "REAPER_Blur"
-            blur.Size = 8
-            blur.Parent = Lighting
-        elseif not on and blur then
-            blur:Destroy()
-            blur = nil
-        end
-    end
-
-    local rainPart, rainEmitter, rainCC, rainConn = nil, nil, nil, nil
-    local function setRain(on)
-        if on and not rainPart then
-            rainCC = Instance.new("ColorCorrectionEffect")
-            rainCC.Name = "REAPER_RainCC"
-            rainCC.TintColor = Color3.fromRGB(160, 170, 190)
-            rainCC.Brightness = -0.08
-            rainCC.Saturation = -0.15
-            rainCC.Parent = Lighting
-            rainPart = Instance.new("Part")
-            rainPart.Name = "REAPER_Rain"
-            rainPart.Size = Vector3.new(60, 1, 60)
-            rainPart.Transparency = 1
-            rainPart.Anchored = true
-            rainPart.CanCollide = false
-            rainPart.CanQuery = false
-            rainPart.CanTouch = false
-            rainPart.CastShadow = false
-            rainEmitter = Instance.new("ParticleEmitter")
-            rainEmitter.Rate = 250
-            rainEmitter.Lifetime = NumberRange.new(1, 1.4)
-            rainEmitter.Speed = NumberRange.new(60, 80)
-            rainEmitter.EmissionDirection = Enum.NormalId.Bottom
-            rainEmitter.Acceleration = Vector3.new(0, -40, 0)
-            rainEmitter.Size = NumberSequence.new(0.12)
-            rainEmitter.Transparency = NumberSequence.new(0.35)
-            rainEmitter.Color = ColorSequence.new(Color3.fromRGB(170, 200, 255))
-            rainEmitter.Parent = rainPart
-            rainPart.Parent = workspace
-            rainConn = RunService.Heartbeat:Connect(function()
-                local cam = workspace.CurrentCamera
-                if cam and rainPart.Parent then
-                    rainPart.CFrame = CFrame.new(cam.Position + Vector3.new(0, 30, 0))
-                end
-            end)
-        elseif not on and rainPart then
-            if rainConn then
-                rainConn:Disconnect()
-                rainConn = nil
-            end
-            pcall(function() rainPart:Destroy() end)
-            pcall(function() rainCC:Destroy() end)
-            rainPart, rainEmitter, rainCC = nil, nil, nil
-        end
-    end
 
     local function setNight(on)
         Lighting.ClockTime = on and 0 or origClock
     end
-
-    local swimOn = false
-    local swimSpeed = 30
 
     local visualState = {}
     local VisualMenuButton = create("TextButton", {
@@ -1601,20 +1453,7 @@ elseif tabName == "Visual" then
     create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = VisualListHolder })
 
     local visuals = {
-        { "Fullbright", setFullbright },
-        { "Remove Fog", setNoFog },
-        { "Night Vision", setNightVision },
-        { "No Shadows", function(on)
-            Lighting.GlobalShadows = not on and origShadows or false
-        end },
-        { "FPS Boost", setFpsBoost },
-        { "Crosshair", setCrosshair },
-        { "Blur Screen", setBlur },
-        { "Rain", setRain },
         { "Make Night", setNight },
-        { "Fast Swim", function(on)
-            swimOn = on
-        end },
     }
 
     for _, item in ipairs(visuals) do
@@ -1664,12 +1503,6 @@ elseif tabName == "Visual" then
         desiredFov = v
         pcall(function() workspace.CurrentCamera.FieldOfView = v end)
     end)
-    col2:AddSlider("Zoom Distance", 10, 500, math.clamp(LocalPlayer.CameraMaxZoomDistance, 10, 500), function(v)
-        LocalPlayer.CameraMaxZoomDistance = v
-    end)
-    col2:AddSlider("Swim Speed", 16, 100, swimSpeed, function(v)
-        swimSpeed = v
-    end)
 
     task.spawn(function()
         while col1.Page.Parent do
@@ -1680,19 +1513,6 @@ elseif tabName == "Visual" then
                 end
             end)
             task.wait(0.5)
-        end
-    end)
-
-    task.spawn(function()
-        while col1.Page.Parent do
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if swimOn and hum and root and hum:GetState() == Enum.HumanoidStateType.Swimming then
-                local move = hum.MoveDirection
-                root.AssemblyLinearVelocity = Vector3.new(move.X * swimSpeed, root.AssemblyLinearVelocity.Y, move.Z * swimSpeed)
-            end
-            task.wait()
         end
     end)
 else
