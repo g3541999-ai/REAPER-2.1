@@ -560,6 +560,7 @@ local ShaderPresets = {
     ["Пульсар"] = {
         Lighting = { Brightness=1.45, ClockTime=13.5, FogEnd=20000, ExposureCompensation=-0.05, ShadowSoftness=0.55, Ambient=Color3.fromRGB(52,56,74), ColorShift_Top=Color3.fromRGB(140,165,255), OutdoorAmbient=Color3.fromRGB(62,72,110) },
         ColorCorrection={Brightness=0.02,Saturation=-0.08,Contrast=0.22,TintColor=Color3.fromRGB(220,228,255)},
+        SunRays={Intensity=0.2,Spread=0.6},
         Atmosphere={Density=0.12,Offset=0.15,Haze=0.5,Glare=0.1,Color=Color3.fromRGB(110,125,180),Decay=Color3.fromRGB(60,68,100)},
     },
 }
@@ -776,8 +777,8 @@ local function ApplyShader(shaderName, level)
         ActiveEffects[#ActiveEffects+1] = pSky
         local pBloom = Instance.new("BloomEffect", Lighting)
         pBloom.Name = "SavitarPulsarBloom"
-        pBloom.Threshold = 0.4
-        pBloom.Size = 30
+        pBloom.Threshold = 0.3
+        pBloom.Size = 70
         pBloom.Intensity = 1
         ActiveEffects[#ActiveEffects+1] = pBloom
 
@@ -802,9 +803,9 @@ local function ApplyShader(shaderName, level)
         jAC.Parent = jetPart
         local jetColor = ColorSequence.new(Color3.fromRGB(150, 190, 255), Color3.fromRGB(255, 255, 255))
         local jetTrans = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.25),
-            NumberSequenceKeypoint.new(0.5, 0.5),
-            NumberSequenceKeypoint.new(1, 1),
+            NumberSequenceKeypoint.new(0, 0.12),
+            NumberSequenceKeypoint.new(0.5, 0.3),
+            NumberSequenceKeypoint.new(1, 0.85),
         })
         local jets = {}
         for _, att in ipairs({ jA0, jA1 }) do
@@ -812,11 +813,11 @@ local function ApplyShader(shaderName, level)
             beam.Name = "SavitarPulsarJet"
             beam.Attachment0 = jAC
             beam.Attachment1 = att
-            beam.Width0 = 40
-            beam.Width1 = 10
+            beam.Width0 = 70
+            beam.Width1 = 20
             beam.Color = jetColor
             beam.Transparency = jetTrans
-            beam.Brightness = 3
+            beam.Brightness = 4
             beam.LightEmission = 1
             beam.LightInfluence = 0
             beam.Segments = 1
@@ -845,7 +846,7 @@ local function ApplyShader(shaderName, level)
                         jets.Part.CFrame = CFrame.lookAt(pos, pos + Vector3.new(0, 1, 0))
                     end
                     for _, beam in ipairs(jets.Beams) do
-                        beam.Brightness = (1.5 + 1.5 * ph) * t2
+                        beam.Brightness = (2.5 + 2.5 * ph) * t2
                     end
                 end
             end)
