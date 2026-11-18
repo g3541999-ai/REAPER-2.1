@@ -3,7 +3,7 @@
 -- ==========================================
 
 -- =====================================================================
--- ЗАГРУЗОЧНЫЙ ЭКРАН (окно по центру, в линию, название скрипта)
+-- ЗАГРУЗОЧНЫЙ ЭКРАН (тёмный на весь экран, карточка по центру, белая линия загрузки)
 -- =====================================================================
 local loaderGui = Instance.new("ScreenGui")
 loaderGui.Name = "PulsarLoader"
@@ -11,16 +11,22 @@ loaderGui.ResetOnSpawn = false
 loaderGui.DisplayOrder = 9999
 loaderGui.IgnoreGuiInset = true
 
+local loaderBack = Instance.new("Frame")
+loaderBack.Size = UDim2.fromScale(1, 1)
+loaderBack.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
+loaderBack.BorderSizePixel = 0
+loaderBack.Parent = loaderGui
+
 local loaderFrame = Instance.new("Frame")
 loaderFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 loaderFrame.Position = UDim2.fromScale(0.5, 0.5)
-loaderFrame.Size = UDim2.fromOffset(360, 46)
+loaderFrame.Size = UDim2.fromOffset(360, 90)
 loaderFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
 loaderFrame.BorderSizePixel = 0
 loaderFrame.Parent = loaderGui
 
 local loaderCorner = Instance.new("UICorner")
-loaderCorner.CornerRadius = UDim.new(0, 8)
+loaderCorner.CornerRadius = UDim.new(0, 10)
 loaderCorner.Parent = loaderFrame
 
 local loaderStroke = Instance.new("UIStroke")
@@ -29,25 +35,40 @@ loaderStroke.Thickness = 1
 loaderStroke.Parent = loaderFrame
 
 local loaderTitle = Instance.new("TextLabel")
-loaderTitle.Size = UDim2.fromScale(1, 1)
+loaderTitle.Size = UDim2.new(1, 0, 0, 30)
+loaderTitle.Position = UDim2.new(0, 0, 0, 12)
 loaderTitle.BackgroundTransparency = 1
-loaderTitle.Text = "PULSAR 2.3"
+loaderTitle.Text = "PULSAR"
 loaderTitle.TextColor3 = Color3.new(1, 1, 1)
 loaderTitle.Font = Enum.Font.GothamBold
-loaderTitle.TextSize = 16
+loaderTitle.TextSize = 22
 loaderTitle.Parent = loaderFrame
 
+local loaderVersion = Instance.new("TextLabel")
+loaderVersion.Size = UDim2.new(1, 0, 0, 18)
+loaderVersion.Position = UDim2.new(0, 0, 0, 42)
+loaderVersion.BackgroundTransparency = 1
+loaderVersion.Text = "Версия 2.3"
+loaderVersion.TextColor3 = Color3.fromRGB(160, 160, 170)
+loaderVersion.Font = Enum.Font.Gotham
+loaderVersion.TextSize = 14
+loaderVersion.Parent = loaderFrame
+
 local loaderBar = Instance.new("Frame")
-loaderBar.AnchorPoint = Vector2.new(0.5, 1)
-loaderBar.Position = UDim2.new(0.5, 0, 1, -5)
-loaderBar.Size = UDim2.new(1, -24, 0, 4)
+loaderBar.AnchorPoint = Vector2.new(0.5, 0)
+loaderBar.Position = UDim2.new(0.5, 0, 0.5, 60)
+loaderBar.Size = UDim2.new(0, 280, 0, 4)
 loaderBar.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
 loaderBar.BorderSizePixel = 0
-loaderBar.Parent = loaderFrame
+loaderBar.Parent = loaderGui
+
+local loaderBarCorner = Instance.new("UICorner")
+loaderBarCorner.CornerRadius = UDim.new(1, 0)
+loaderBarCorner.Parent = loaderBar
 
 local loaderFill = Instance.new("Frame")
 loaderFill.Size = UDim2.fromScale(0, 1)
-loaderFill.BackgroundColor3 = Color3.fromRGB(125, 85, 255)
+loaderFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 loaderFill.BorderSizePixel = 0
 loaderFill.Parent = loaderBar
 
@@ -61,7 +82,7 @@ end
 
 task.spawn(function()
     local progress = 0
-    while loaderGui.Parent do
+    while loaderGui and loaderGui.Parent do
         progress = math.min(progress + 0.015, 0.9)
         pcall(function() loaderFill.Size = UDim2.fromScale(progress, 1) end)
         task.wait(0.05)
@@ -69,10 +90,11 @@ task.spawn(function()
 end)
 
 function PulsarLoaderComplete()
-    if not loaderGui or not loaderGui.Parent then return end
+    if not loaderGui or typeof(loaderGui) ~= "Instance" then return end
     pcall(function() loaderFill.Size = UDim2.fromScale(1, 1) end)
     task.wait(0.35)
     pcall(function() loaderGui:Destroy() end)
+    loaderGui = nil
 end
 
 -- =====================================================================
