@@ -26,7 +26,7 @@ local Window = Library:CreateWindow({
     MinSidebarWidth = 200,
     SidebarCompactWidth = 56,
 })
-pcall(function() Window:SetCornerRadius(20) end)
+pcall(function() Window:SetCornerRadius(8) end)
 
 local Tabs = {
     { Name = "Home",         Icon = "house" },
@@ -66,7 +66,18 @@ HomeGroup:AddImage("LocalAvatar", {
 })
 
 HomeGroup:AddLabel("PULSAR 2.3 — Obsidian Edition")
-HomeGroup:AddLabel("Загружено: " .. os.date("%H:%M:%S"))
+
+local TimeLabel = HomeGroup:AddLabel("Время: " .. os.date("%H:%M:%S"))
+
+task.spawn(function()
+    while not Library.Unloaded do
+        task.wait(1)
+        local t = "Время: " .. os.date("%H:%M:%S")
+        pcall(function() TimeLabel:SetText(t) end)
+        pcall(function() TimeLabel.Text = t end)
+        pcall(function() TimeLabel.TextLabel.Text = t end)
+    end
+end)
 
 HomeGroup:AddButton({
     Text = "Список игроков",
