@@ -90,13 +90,20 @@ LockButton.Position = UDim2.fromOffset(10, 10)
 LockButton.Size = UDim2.fromOffset(290, 36)
 LockButton.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 LockButton.BorderSizePixel = 0
-LockButton.Text = "PULSAR 2.3 | FPS: 0 || Пинг: 0 мс"
-LockButton.TextSize = 12
-LockButton.TextColor3 = Color3.new(1, 1, 1)
-LockButton.Font = Enum.Font.Gotham
-LockButton.TextXAlignment = Enum.TextXAlignment.Left
+LockButton.Text = ""
 LockButton.AutoButtonColor = false
 LockButton.Parent = LockGui
+
+local LockLabel = Instance.new("TextLabel")
+LockLabel.Size = UDim2.new(1, -20, 1, 0)
+LockLabel.Position = UDim2.fromOffset(10, 0)
+LockLabel.BackgroundTransparency = 1
+LockLabel.Text = "PULSAR 2.3 | FPS: 0 || Пинг: 0 мс"
+LockLabel.TextColor3 = Color3.new(1, 1, 1)
+LockLabel.Font = Enum.Font.Gotham
+LockLabel.TextSize = 12
+LockLabel.TextXAlignment = Enum.TextXAlignment.Left
+LockLabel.Parent = LockButton
 
 local LockCorner = Instance.new("UICorner")
 LockCorner.CornerRadius = UDim.new(0, 8)
@@ -156,6 +163,9 @@ task.spawn(function()
         if acc > 0 then fps = math.floor(frames / acc + 0.5) end
         pcall(function()
             ping = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+        end)
+        pcall(function()
+            LockLabel.Text = "PULSAR 2.3 | FPS: " .. fps .. " || Пинг: " .. math.floor(ping) .. " мс"
         end)
         pcall(function()
             LockButton.Text = "PULSAR 2.3 | FPS: " .. fps .. " || Пинг: " .. math.floor(ping) .. " мс"
