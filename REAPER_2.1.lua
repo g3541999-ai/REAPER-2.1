@@ -312,7 +312,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 12")
-StatsGroup:AddLabel("Шейдеров: 7")
+StatsGroup:AddLabel("Шейдеров: 8")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -870,14 +870,12 @@ end
 
 local PulsarSoundMuteOff
 local GfxUnload
-local RainCleanerOff
 
 local function VisualsCleanup()
     StormStop()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
     if GfxUnload then pcall(GfxUnload) end
-    if RainCleanerOff then pcall(RainCleanerOff) end
     Updaters = {}
     if VisualHeartbeat then
         VisualHeartbeat:Disconnect()
@@ -945,6 +943,32 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 -- =====================================================================
 local SoundMuteCatGroup = VisualTab:AddRightGroupbox("Звуки")
 local MuteSoundConn = nil
+local MutedOriginals = {}
+
+local function TryMuteSound(obj, cat)
+    local current = obj.SoundGroup
+    if current and string.find(current.Name, "PulsarMute", 1, true) then
+        return
+    end
+    if MutedOriginals[obj] ~= nil then
+        return
+    end
+    MutedOriginals[obj] = current or false
+    obj.SoundGroup = cat.Group
+end
+
+local function RestoreSound(obj)
+    local prev = MutedOriginals[obj]
+    if prev == nil then return end
+    MutedOriginals[obj] = nil
+    pcall(function()
+        if prev ~= false then
+            obj.SoundGroup = prev
+        else
+            obj.SoundGroup = nil
+        end
+    end)
+end
 
 local SoundCategories = {
     { Name = "Ambience",     Text = "Mute Ambience",              Patterns = { "ambien", "wind", "birds" } },
@@ -975,9 +999,11 @@ end
 local function UninstallGroup(group)
     if not group then return end
     pcall(function()
-        for _, obj in ipairs(game:GetDescendants()) do
-            if obj:IsA("Sound") and obj.SoundGroup == group then
-                obj.SoundGroup = nil
+        for obj, _prev in pairs(MutedOriginals) do
+            if not obj.Parent or not obj:IsA("Sound") then
+                MutedOriginals[obj] = nil
+            elseif obj.SoundGroup == group then
+                RestoreSound(obj)
             end
         end
     end)
@@ -995,8 +1021,8 @@ local function UpdateMuteWatcher()
             task.defer(function()
                 for _, cat2 in ipairs(SoundCategories) do
                     pcall(function()
-                        if cat2.Group and obj.SoundGroup == nil and MatchesPatterns(obj, cat2.Patterns) then
-                            obj.SoundGroup = cat2.Group
+                        if cat2.Group and MatchesPatterns(obj, cat2.Patterns) then
+                            TryMuteSound(obj, cat2)
                         end
                     end)
                 end
@@ -1035,8 +1061,8 @@ for _, cat in ipairs(SoundCategories) do
                 local group = cat.Group
                 pcall(function()
                     for _, obj in ipairs(game:GetDescendants()) do
-                        if obj:IsA("Sound") and obj.SoundGroup == nil and MatchesPatterns(obj, cat.Patterns) then
-                            obj.SoundGroup = group
+                        if obj:IsA("Sound") and MatchesPatterns(obj, cat.Patterns) then
+                            TryMuteSound(obj, cat)
                         end
                     end
                 end)
@@ -1048,91 +1074,6 @@ for _, cat in ipairs(SoundCategories) do
             end
         end,
     })
-end
-
-
--- =====================================================================
--- ЧИСТИЛЬЩИК ДОЖДЯ — ДВИЖОК (управление — в колонке Thunderstorm)
--- =====================================================================
-
-local RainPatterns = { "rain", "raindrop", "rainzone" }
-
-local RainCleaner = { GuardConn = nil, SavedClouds = nil }
-
-local function RainMatches(obj)
-    local node = obj
-    local names = {}
-    while node and node ~= game do
-        names[#names + 1] = string.lower(node.Name)
-        node = node.Parent
-    end
-    for _, pattern in ipairs(RainPatterns) do
-        for _, name in ipairs(names) do
-            if pattern == "rain" and string.find(name, "train", 1, true) then
-                continue
-            end
-            if string.find(name, pattern, 1, true) then return true end
-        end
-    end
-    return false
-end
-
-local function RainGetClouds()
-    local terrain = workspace:FindFirstChildOfClass("Terrain")
-    return terrain and terrain:FindFirstChildOfClass("Clouds")
-end
-
-local function RainHideClouds(save)
-    pcall(function()
-        local clouds = RainGetClouds()
-        if not clouds then return end
-        if save then
-            RainCleaner.SavedClouds = { Enabled = clouds.Enabled, Cover = clouds.Cover }
-        end
-        clouds.Enabled = false
-    end)
-end
-
-local function RainRestoreClouds()
-    pcall(function()
-        local clouds = RainGetClouds()
-        local saved = RainCleaner.SavedClouds
-        if clouds and saved then
-            clouds.Enabled = saved.Enabled
-            clouds.Cover = saved.Cover
-        end
-        RainCleaner.SavedClouds = nil
-    end)
-end
-
-local function RainWash()
-    pcall(function() StormStop() end)
-    local containers = { workspace }
-    pcall(function()
-        if workspace.CurrentCamera then
-            containers[#containers + 1] = workspace.CurrentCamera
-        end
-    end)
-    for _, container in ipairs(containers) do
-        pcall(function()
-            for _, obj in ipairs(container:GetDescendants()) do
-                if obj:IsA("ParticleEmitter") and RainMatches(obj) then
-                    pcall(function() obj.Enabled = false end)
-                    pcall(function() obj:Destroy() end)
-                elseif obj:IsA("Clouds") then
-                    pcall(function() obj.Enabled = false end)
-                end
-            end
-        end)
-    end
-end
-
-RainCleanerOff = function()
-    if RainCleaner.GuardConn then
-        pcall(function() RainCleaner.GuardConn:Disconnect() end)
-        RainCleaner.GuardConn = nil
-    end
-    RainRestoreClouds()
 end
 
 
@@ -1554,7 +1495,7 @@ do
 
     GfxDivider("Boost FPS")
 
-    Graphics:AddToggle("BoostFPS", {
+    Graphics:AddToggle("Boost FPS", {
         Text = "Boost FPS",
         Default = false,
         Callback = GfxSetBoostFPS,
@@ -1567,81 +1508,6 @@ do
         Multi = true,
         AllowNull = true,
         Callback = GfxSetBoostFPSOptions,
-    })
-
-    local ThunderGroup = VisualTab:AddLeftGroupbox("Thunderstorm")
-
-    ThunderGroup:AddToggle("PulsarNoRain", {
-        Text = "Без дождя",
-        Default = false,
-        Callback = function(on)
-            if on then
-                RainHideClouds(true)
-                RainWash()
-                RainCleaner.GuardConn = game.DescendantAdded:Connect(function(obj)
-                    if obj:IsA("Clouds") then
-                        pcall(function() obj.Enabled = false end)
-                        return
-                    end
-                    if not obj:IsA("ParticleEmitter") then return end
-                    task.defer(function()
-                        pcall(function()
-                            if RainCleaner.GuardConn and RainMatches(obj) then
-                                obj.Enabled = false
-                                obj:Destroy()
-                            end
-                        end)
-                    end)
-                end)
-            else
-                RainCleanerOff()
-            end
-        end,
-    })
-
-    ThunderGroup:AddSlider("PulsarRainDensity", {
-        Text = "Плотность дождя",
-        Default = RainSettings.Density,
-        Min = 0,
-        Max = 200,
-        Rounding = 0,
-        Callback = function(v)
-            RainSettings.Density = v
-            ApplyRainSettings()
-        end,
-    })
-
-    ThunderGroup:AddSlider("PulsarRainSpeed", {
-        Text = "Скорость частиц",
-        Default = RainSettings.Speed,
-        Min = 0,
-        Max = 300,
-        Rounding = 0,
-        Callback = function(v)
-            RainSettings.Speed = v
-            ApplyRainSettings()
-        end,
-    })
-
-    ThunderGroup:AddToggle("PulsarRainCountOn", {
-        Text = "Точное количество",
-        Default = RainSettings.CountOn,
-        Callback = function(on)
-            RainSettings.CountOn = on
-            ApplyRainSettings()
-        end,
-    })
-
-    ThunderGroup:AddSlider("PulsarRainCount", {
-        Text = "Количество частиц/с",
-        Default = RainSettings.Count,
-        Min = 0,
-        Max = 10000,
-        Rounding = 0,
-        Callback = function(v)
-            RainSettings.Count = v
-            ApplyRainSettings()
-        end,
     })
 
     GfxUnload = function()
