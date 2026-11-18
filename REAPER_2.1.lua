@@ -280,6 +280,7 @@ local Tabs = {
     { Name = "Blobman",      Icon = "ghost" },
     { Name = "Toys",         Icon = "blocks" },
     { Name = "Visual",       Icon = "eye" },
+    { Name = "Sounds",       Icon = "volume-x" },
     { Name = "Auto-Clicker", Icon = "zap" },
     { Name = "Misc",         Icon = "wrench" },
     { Name = "Lists",        Icon = "list" },
@@ -297,7 +298,7 @@ local HotkeyGroup = TabObjects["Home"]:AddLeftGroupbox("Горячие клав�
 HotkeyGroup:AddLabel("Right Shift — открыть/закрыть меню")
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
-StatsGroup:AddLabel("Вкладок: 12")
+StatsGroup:AddLabel("Вкладок: 13")
 StatsGroup:AddLabel("Шейдеров: 7")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
@@ -832,8 +833,11 @@ StormStart = function(level)
     end)
 end
 
+local PulsarSoundMuteOff
+
 local function VisualsCleanup()
     StormStop()
+    if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
     Updaters = {}
     if VisualHeartbeat then
@@ -893,6 +897,65 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
         end
     end,
 })
+
+
+-- =====================================================================
+-- ВКЛАДКА SOUNDS (отключение игровых звуков как в Resonance 2.9)
+-- =====================================================================
+local SoundsGroup = TabObjects["Sounds"]:AddLeftGroupbox("Звуки")
+local muteGroup = nil
+local MuteSoundConn = nil
+
+PulsarSoundMuteOff = function()
+    if MuteSoundConn then
+        MuteSoundConn:Disconnect()
+        MuteSoundConn = nil
+    end
+    if muteGroup then
+        local group = muteGroup
+        pcall(function()
+            for _, obj in ipairs(game:GetDescendants()) do
+                if obj:IsA("Sound") and obj.SoundGroup == group then
+                    obj.SoundGroup = nil
+                end
+            end
+        end)
+        pcall(function() group:Destroy() end)
+        muteGroup = nil
+    end
+end
+
+SoundsGroup:AddToggle("PulsarMuteSounds", {
+    Text = "Отключить звуки игры",
+    Default = false,
+    Callback = function(on)
+        if on then
+            if not muteGroup then
+                muteGroup = Instance.new("SoundGroup")
+                muteGroup.Name = "PulsarMuteGroup"
+                muteGroup.Volume = 0
+                muteGroup.Parent = SoundService
+            end
+            local group = muteGroup
+            pcall(function()
+                for _, obj in ipairs(game:GetDescendants()) do
+                    if obj:IsA("Sound") and obj.SoundGroup == nil then
+                        obj.SoundGroup = group
+                    end
+                end
+            end)
+            MuteSoundConn = game.DescendantAdded:Connect(function(obj)
+                if obj:IsA("Sound") and obj.SoundGroup == nil then
+                    obj.SoundGroup = group
+                end
+            end)
+        else
+            pcall(PulsarSoundMuteOff)
+        end
+    end,
+})
+
+SoundsGroup:AddLabel("Глушит звуки без своей SoundGroup; новосозданные тоже")
 
 
 -- =====================================================================
