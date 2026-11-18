@@ -17,12 +17,16 @@ local LocalPlayer = Players.LocalPlayer
 local Window = Library:CreateWindow({
     Title = "PULSAR 2.3",
     Footer = "Powered by Obsidian",
-    Size = UDim2.fromOffset(600, 400),
     Center = true,
     AutoShow = true,
+    Resizable = true,
+    EnableSidebarResize = true,
     EnableCompacting = true,
-    SidebarCompacted = false,
+    SidebarCompacted = true,
+    MinSidebarWidth = 200,
+    SidebarCompactWidth = 56,
 })
+pcall(function() Window:SetCornerRadius(20) end)
 
 local Tabs = {
     { Name = "Home",         Icon = "house" },
@@ -46,10 +50,23 @@ end
 
 local HomeGroup = TabObjects["Home"]:AddLeftGroupbox("Main Functions")
 
+local PlayerGroup = TabObjects["Home"]:AddRightGroupbox("Игроки")
+
+local HotkeyGroup = TabObjects["Home"]:AddLeftGroupbox("Горячие клавиши")
+HotkeyGroup:AddLabel("Right Shift — открыть/закрыть меню")
+
+local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
+StatsGroup:AddLabel("Вкладок: 12")
+StatsGroup:AddLabel("Шейдеров: 7")
+StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
+
 HomeGroup:AddImage("LocalAvatar", {
     Image = "rbxthumb://type=Avatar&w=420&h=420&id=" .. LocalPlayer.UserId,
     Height = 150,
 })
+
+HomeGroup:AddLabel("PULSAR 2.3 — Obsidian Edition")
+HomeGroup:AddLabel("Загружено: " .. os.date("%H:%M:%S"))
 
 HomeGroup:AddButton({
     Text = "Список игроков",
@@ -99,7 +116,7 @@ local function BuildPlayerValues()
     return values
 end
 
-HomeGroup:AddDropdown("CopyPlayerDropdown", {
+PlayerGroup:AddDropdown("CopyPlayerDropdown", {
     Values = BuildPlayerValues(),
     ValueImages = PlayerImages,
     Multi = true,
@@ -123,7 +140,7 @@ end
 Players.PlayerAdded:Connect(function() task.defer(RefreshPlayerList) end)
 Players.PlayerRemoving:Connect(function() task.defer(RefreshPlayerList) end)
 
-HomeGroup:AddButton({
+PlayerGroup:AddButton({
     Text = "Копировать ник",
     Func = function()
         local val = nil
@@ -146,7 +163,7 @@ HomeGroup:AddButton({
     end
 })
 
-HomeGroup:AddButton({
+PlayerGroup:AddButton({
     Text = "Копировать все ники",
     Func = function()
         local names = {}
@@ -484,7 +501,7 @@ local SettingsGroup = TabObjects["Settings"]:AddLeftGroupbox("Interface")
 
 SettingsGroup:AddToggle("HideTabText", {
     Text = "Скрывать текст вкладок",
-    Default = false,
+    Default = true,
     Callback = function(on)
         local ok = pcall(function() Window:SetSidebarCompacted(on) end)
         if not ok then
