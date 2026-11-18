@@ -89,6 +89,7 @@ local LockButton = Instance.new("TextButton")
 LockButton.Position = UDim2.fromOffset(10, 10)
 LockButton.Size = UDim2.fromOffset(290, 36)
 LockButton.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+LockButton.BackgroundTransparency = 0
 LockButton.BorderSizePixel = 0
 LockButton.Text = ""
 LockButton.AutoButtonColor = false
@@ -167,20 +168,24 @@ task.spawn(function()
         pcall(function()
             LockLabel.Text = "PULSAR 2.3 | FPS: " .. fps .. " || Пинг: " .. math.floor(ping) .. " мс"
         end)
-        pcall(function()
-            LockButton.Text = "PULSAR 2.3 | FPS: " .. fps .. " || Пинг: " .. math.floor(ping) .. " мс"
-        end)
         frames = 0
         acc = 0
     end
     pcall(function() conn:Disconnect() end)
 end)
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+local okLib, Library = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
+end)
+if not okLib or type(Library) ~= "table" then
+    pcall(function() PulsarLoaderComplete() end)
+    warn("[PULSAR] Не удалось загрузить библиотеку Obsidian")
+    return
+end
 
 pcall(function()
     local Icons = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua"))()
-    if Icons and Library.SetIconModule then
+    if type(Icons) == "table" and Library.SetIconModule then
         Library:SetIconModule(Icons)
     end
 end)
@@ -332,13 +337,15 @@ HomeGroup:AddDropdown("CopyPlayerDropdown", {
 })
 
 local function RefreshPlayerList()
-    pcall(function()
-        local opts = Library.Options.CopyPlayerDropdown
-        if not opts then return end
-        opts.Values = BuildPlayerValues()
-        opts.ValueImages = PlayerImages
-        opts:SetValue(nil)
-    end)
+    local opts = Library.Options and Library.Options.CopyPlayerDropdown
+    if not opts then return end
+    local values = BuildPlayerValues()
+    pcall(function() opts.ValueImages = PlayerImages end)
+    local ok = pcall(function() opts:SetValues(values) end)
+    if not ok then
+        pcall(function() opts.Values = values end)
+    end
+    pcall(function() opts:SetValue(nil) end)
 end
 
 Players.PlayerAdded:Connect(function() task.defer(RefreshPlayerList) end)
@@ -351,7 +358,16 @@ HomeGroup:AddButton({
         pcall(function() val = Library.Options.CopyPlayerDropdown.Value end)
         local name = nil
         if type(val) == "table" then
-            for n in pairs(val) do name = n break end
+            local opts = Library.Options.CopyPlayerDropdown
+            local values = opts and opts.Values
+            for _, v in ipairs(values or {}) do
+                if val[v] then name = v break end
+            end
+            if not name then
+                for n in pairs(val) do
+                    if type(n) == "string" then name = n break end
+                end
+            end
         elseif type(val) == "string" then
             name = val
         end
@@ -630,6 +646,10 @@ local function VisualsCleanup()
         VisualHeartbeat:Disconnect()
         VisualHeartbeat = nil
     end
+    pcall(function()
+        LockGui:Destroy()
+        loaderGui:Destroy()
+    end)
 end
 
 pcall(function()
