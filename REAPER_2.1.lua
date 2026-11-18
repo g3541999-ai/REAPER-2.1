@@ -1089,7 +1089,7 @@ do
         ParticleSettings = {
             Enabled = false,
             BoxSize = 500,
-            Texture = "rbxassetid://242109931",
+            Texture = "rbxassetid://5857892330",
             Color = Color3.fromRGB(255, 255, 255),
             Transparency = 0,
             ParticleSize = 1,
@@ -1425,22 +1425,38 @@ do
         })
     end)
 
+    local ParticleTextures = {
+        ["Dot"] = "rbxassetid://5857892330",
+        ["Sparkles"] = "rbxasset://textures/particles/sparkles_main.dds",
+        ["Fire"] = "rbxasset://textures/particles/fire_main.dds",
+        ["Smoke"] = "rbxasset://textures/particles/smoke_main.dds",
+        ["Sparks"] = "rbxassetid://244359828",
+        ["Star"] = "rbxassetid://6772783963",
+        ["Star Small"] = "rbxassetid://5860841663",
+        ["Heart"] = "rbxassetid://5857851618",
+        ["Diamond"] = "rbxassetid://6772766413",
+        ["Leaf"] = "rbxassetid://6703369286",
+        ["Paw"] = "rbxassetid://6803084085",
+        ["Lightning"] = "rbxassetid://6772766551",
+        ["Explosion"] = "rbxassetid://5833235272",
+        ["Moon"] = "rbxassetid://17007876976",
+        ["Skull"] = "rbxassetid://73203132374166",
+    }
+    local ParticleTextureOrder = { "Dot", "Sparkles", "Fire", "Smoke", "Sparks", "Star", "Star Small", "Heart", "Diamond", "Leaf", "Paw", "Lightning", "Explosion", "Moon", "Skull" }
+
     local ParticlesBox = GfxDepbox({ { Library.Options.ParticlesT, true } })
 
     if ParticlesBox then
         ParticlesBox:AddDropdown("ParticlesDropdown", {
-            Values = { "Circles", "Snowflakes", "Resonance" },
+            Values = ParticleTextureOrder,
             Multi = false,
-            Default = "Circles",
+            Default = "Dot",
             Searchable = true,
             Text = "Texture",
             Callback = function(value)
-                if value == "Resonance" then
-                    GfxSetParticleProp("Texture", "rbxassetid://79685990879972")
-                elseif value == "Snowflakes" then
-                    GfxSetParticleProp("Texture", "rbxassetid://14443362047")
-                elseif value == "Circles" then
-                    GfxSetParticleProp("Texture", "rbxassetid://242109931")
+                local tex = ParticleTextures[value]
+                if tex then
+                    GfxSetParticleProp("Texture", tex)
                 end
             end,
         })
@@ -1495,7 +1511,7 @@ do
 
     GfxDivider("Boost FPS")
 
-    Graphics:AddToggle("Boost FPS", {
+    Graphics:AddToggle("BoostFPS", {
         Text = "Boost FPS",
         Default = false,
         Callback = GfxSetBoostFPS,
