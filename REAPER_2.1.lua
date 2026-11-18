@@ -559,10 +559,10 @@ local ShaderPresets = {
         Atmosphere={Density=0.35,Offset=0.15,Haze=2.0,Glare=0.3,Color=Color3.fromRGB(255,150,220),Decay=Color3.fromRGB(140,60,150)},
     },
     ["Кровавая луна"] = {
-        Lighting = { Brightness=0.9, ClockTime=0, FogEnd=1200, FogStart=0, FogColor=Color3.fromRGB(90,12,12), ExposureCompensation=0.08, ShadowSoftness=0, Ambient=Color3.fromRGB(55,6,6), ColorShift_Top=Color3.fromRGB(170,40,40), OutdoorAmbient=Color3.fromRGB(80,12,12) },
+        Lighting = { Brightness=1.6, ClockTime=0, FogEnd=4000, FogStart=0, FogColor=Color3.fromRGB(120,25,25), ExposureCompensation=0.15, ShadowSoftness=0, Ambient=Color3.fromRGB(85,12,12), ColorShift_Top=Color3.fromRGB(180,60,60), OutdoorAmbient=Color3.fromRGB(110,25,25) },
         Bloom={Intensity=0.7,Threshold=0.7,Size=44},
-        ColorCorrection={Saturation=-0.2,Contrast=0.3,TintColor=Color3.fromRGB(255,180,180)},
-        Atmosphere={Density=0.55,Offset=0.2,Haze=2.4,Glare=0.1,Color=Color3.fromRGB(150,25,25),Decay=Color3.fromRGB(70,8,8)},
+        ColorCorrection={Saturation=-0.1,Contrast=0.2,TintColor=Color3.fromRGB(255,205,205)},
+        Atmosphere={Density=0.4,Offset=0.2,Haze=1.8,Glare=0.1,Color=Color3.fromRGB(180,50,50),Decay=Color3.fromRGB(100,20,20)},
     },
     ["Глубокий космос"] = {
         Lighting = { Brightness=1.6, ClockTime=0, FogEnd=100000, ExposureCompensation=0.12, ShadowSoftness=0.4, Ambient=Color3.fromRGB(24,22,48), ColorShift_Top=Color3.fromRGB(120,110,220), OutdoorAmbient=Color3.fromRGB(45,42,85) },
@@ -773,7 +773,7 @@ local function ApplyShader(shaderName, level)
         bmSky.SkyboxUp = bmBlack
         bmSky.SkyboxDn = bmBlack
         bmSky.MoonTextureId = "rbxassetid://6437960440"
-        bmSky.MoonAngularSize = 32
+        bmSky.MoonAngularSize = 60
         bmSky.SunAngularSize = 0
         bmSky.CelestialBodiesShown = true
         bmSky.StarCount = 1000
