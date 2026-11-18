@@ -534,11 +534,9 @@ local ShaderPresets = {
         Atmosphere={Density=0.18,Offset=0.15,Haze=0.6,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
     },
     ["Thunderstorm"] = {
-        Lighting = { Brightness=0.9, ClockTime=19.2, FogEnd=700, FogStart=0, FogColor=Color3.fromRGB(40,42,50), ExposureCompensation=-0.1, ShadowSoftness=0.2, Ambient=Color3.fromRGB(24,25,30), ColorShift_Top=Color3.fromRGB(90,100,130), OutdoorAmbient=Color3.fromRGB(45,48,60) },
-        Blur={Size=1.2},
-        ColorCorrection={Saturation=-0.18,Contrast=0.3,TintColor=Color3.fromRGB(200,210,230)},
-        SunRays={Intensity=0,Spread=0.6},
-        Atmosphere={Density=0.45,Offset=0.2,Haze=2.2,Glare=0.05,Color=Color3.fromRGB(70,75,95),Decay=Color3.fromRGB(60,65,85)},
+        Lighting = { Brightness=1.7, ClockTime=19.4, FogEnd=900, FogStart=0, FogColor=Color3.fromRGB(70,75,90), ExposureCompensation=-0.02, ShadowSoftness=0.4, Ambient=Color3.fromRGB(45,47,55), ColorShift_Top=Color3.fromRGB(120,128,150), OutdoorAmbient=Color3.fromRGB(90,95,115) },
+        ColorCorrection={Saturation=-0.12,Contrast=0.18,TintColor=Color3.fromRGB(215,220,235)},
+        Atmosphere={Density=0.3,Offset=0.2,Haze=1.6,Glare=0.05,Color=Color3.fromRGB(90,95,115),Decay=Color3.fromRGB(80,85,105)},
     },
 }
 
@@ -697,6 +695,26 @@ local function ApplyShader(shaderName, level)
         sky.SunAngularSize = 14
         ActiveEffects[#ActiveEffects+1] = sky
     end
+    if shaderName == "Thunderstorm" then
+        local stormSky = Instance.new("Sky", Lighting)
+        stormSky.Name = "SavitarStormSky"
+        stormSky.CelestialBodiesShown = false
+        stormSky.StarCount = 0
+        ActiveEffects[#ActiveEffects+1] = stormSky
+        local terrain = workspace:FindFirstChildOfClass("Terrain")
+        if terrain then
+            local clouds = terrain:FindFirstChildOfClass("Clouds")
+            if not clouds then
+                clouds = Instance.new("Clouds")
+                clouds.Parent = terrain
+                ActiveEffects[#ActiveEffects+1] = clouds
+            end
+            clouds.Enabled = true
+            clouds.Cover = math.clamp(0.4 + t * 0.5, 0, 1)
+            clouds.Density = 0.7
+            clouds.Color = Color3.fromRGB(120, 125, 135)
+        end
+    end
 
     if shaderName == "Thunderstorm" then
         StormStart(level)
@@ -720,7 +738,7 @@ end
 -- =====================================================================
 -- ГРОЗА (ливень + молнии со звуком) — для пресета Thunderstorm
 -- =====================================================================
-local STORM_THUNDER_IDS = { 98719867425764, 4961240438 }
+local STORM_THUNDER_IDS = { 98719867425764, 133426162, 4961240438 }
 local SoundService = game:GetService("SoundService")
 local Storm = { Zone = nil, Sound = nil, MoveConn = nil, FlashConn = nil }
 
@@ -765,11 +783,15 @@ StormStart = function(level)
 
     for _, id in ipairs(STORM_THUNDER_IDS) do
         local s = Instance.new("Sound")
+        s.Name = "PulsarThunder"
         s.SoundId = "rbxassetid://" .. id
-        s.Volume = 0.8
-        s.Parent = zone
-        local ok = pcall(function() SoundService:PreloadAsync({ s }) end)
-        if ok and s.TimeLength > 0 then
+        s.Volume = 1
+        s.Parent = SoundService
+        local t0 = os.clock()
+        while not s.IsLoaded and os.clock() - t0 < 2.5 do
+            task.wait(0.1)
+        end
+        if s.IsLoaded and s.TimeLength > 0 then
             Storm.Sound = s
             break
         end
@@ -785,18 +807,24 @@ StormStart = function(level)
 
     Storm.FlashConn = task.spawn(function()
         while Storm.Zone and Storm.Zone.Parent do
-            task.wait(math.random(4, 11))
+            task.wait(math.random(3, 8))
             if not (Storm.Zone and Storm.Zone.Parent) then break end
             local base = Lighting.Brightness
+            local baseExp = Lighting.ExposureCompensation
             pcall(function()
+                Lighting.Brightness = base + 3
+                Lighting.ExposureCompensation = baseExp + 0.6
+                task.wait(0.1)
+                Lighting.Brightness = base + 1
+                Lighting.ExposureCompensation = baseExp + 0.2
+                task.wait(0.15)
                 Lighting.Brightness = base + 2.5
                 task.wait(0.08)
-                Lighting.Brightness = base + 0.5
-                task.wait(0.12)
                 Lighting.Brightness = base
+                Lighting.ExposureCompensation = baseExp
             end)
             if Storm.Sound then
-                task.delay(0.4, function()
+                task.delay(0.3, function()
                     pcall(function() Storm.Sound:Play() end)
                 end)
             end
