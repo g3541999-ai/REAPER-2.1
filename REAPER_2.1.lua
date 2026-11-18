@@ -140,27 +140,38 @@ task.spawn(function()
 end)
 
 local loaderDone = false
+local loaderShownAt = os.clock()
 function PulsarLoaderComplete()
     if loaderDone then return end
     if not loaderGui or typeof(loaderGui) ~= "Instance" then return end
     loaderDone = true
+
+    local left = 2 - (os.clock() - loaderShownAt)
+    if left > 0 then
+        task.wait(left)
+    end
+
     pcall(function()
         TweenService:Create(
             loaderFill,
-            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             { Size = UDim2.fromScale(1, 1) }
         ):Play()
     end)
-    task.wait(0.4)
+    task.wait(0.6)
     if not loaderGui or typeof(loaderGui) ~= "Instance" then return end
+
+    local out = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     pcall(function()
-        local out = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
         TweenService:Create(loaderBack, out, { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(loaderFrame, out, { Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1 }):Play()
+        TweenService:Create(loaderFrame, out, { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(loaderTitle, out, { TextTransparency = 1 }):Play()
+        TweenService:Create(loaderVersion, out, { TextTransparency = 1 }):Play()
+        TweenService:Create(loaderLogo, out, { ImageTransparency = 1 }):Play()
         TweenService:Create(loaderBar, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderFill, out, { BackgroundTransparency = 1 }):Play()
     end)
-    task.wait(0.3)
+    task.wait(0.7)
     pcall(function() loaderGui:Destroy() end)
     loaderGui = nil
 end
