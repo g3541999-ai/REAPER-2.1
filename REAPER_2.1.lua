@@ -76,19 +76,20 @@ function PulsarLoaderComplete()
 end
 
 -- =====================================================================
--- ОКНО FPS | ПИНГ (верх справа, темп как у Резонанса: раз в секунду)
+-- ОКНО FPS | ПИНГ (левый верх, перетаскиваемое, после загрузки меню)
 -- =====================================================================
 local StatsGui = Instance.new("ScreenGui")
 StatsGui.Name = "PulsarStats"
 StatsGui.ResetOnSpawn = false
 StatsGui.DisplayOrder = 9998
 StatsGui.IgnoreGuiInset = true
+StatsGui.Enabled = false
 
 local StatsFrame = Instance.new("Frame")
-StatsFrame.AnchorPoint = Vector2.new(1, 0)
-StatsFrame.Position = UDim2.new(1, -10, 0, 10)
-StatsFrame.Size = UDim2.fromOffset(220, 46)
-StatsFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+StatsFrame.AnchorPoint = Vector2.new(0, 0)
+StatsFrame.Position = UDim2.fromOffset(10, 10)
+StatsFrame.Size = UDim2.fromOffset(290, 36)
+StatsFrame.BackgroundColor3 = Color3.fromRGB(36, 38, 43)
 StatsFrame.BorderSizePixel = 0
 StatsFrame.Parent = StatsGui
 
@@ -97,31 +98,72 @@ StatsCorner.CornerRadius = UDim.new(0, 8)
 StatsCorner.Parent = StatsFrame
 
 local StatsStroke = Instance.new("UIStroke")
-StatsStroke.Color = Color3.fromRGB(125, 85, 255)
+StatsStroke.Color = Color3.fromRGB(60, 62, 68)
 StatsStroke.Thickness = 1
 StatsStroke.Parent = StatsFrame
 
-local StatsTitle = Instance.new("TextLabel")
-StatsTitle.Size = UDim2.new(1, -16, 0, 20)
-StatsTitle.Position = UDim2.fromOffset(8, 2)
-StatsTitle.BackgroundTransparency = 1
-StatsTitle.Text = "PULSAR 2.3"
-StatsTitle.TextColor3 = Color3.fromRGB(170, 140, 255)
-StatsTitle.Font = Enum.Font.GothamBold
-StatsTitle.TextSize = 13
-StatsTitle.TextXAlignment = Enum.TextXAlignment.Left
-StatsTitle.Parent = StatsFrame
-
 local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(1, -16, 0, 18)
-StatsLabel.Position = UDim2.fromOffset(8, 24)
+StatsLabel.Size = UDim2.new(1, -56, 1, 0)
+StatsLabel.Position = UDim2.fromOffset(10, 0)
 StatsLabel.BackgroundTransparency = 1
-StatsLabel.Text = "FPS: 0 | Пинг: 0 мс"
+StatsLabel.Text = "PULSAR 2.3 | FPS: 0 | Пинг: 0 мс"
 StatsLabel.TextColor3 = Color3.new(1, 1, 1)
 StatsLabel.Font = Enum.Font.Gotham
-StatsLabel.TextSize = 13
+StatsLabel.TextSize = 12
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatsLabel.Parent = StatsFrame
+
+local StatsPill = Instance.new("Frame")
+StatsPill.AnchorPoint = Vector2.new(1, 0.5)
+StatsPill.Position = UDim2.new(1, -10, 0.5, 0)
+StatsPill.Size = UDim2.fromOffset(26, 14)
+StatsPill.BackgroundColor3 = Color3.fromRGB(69, 169, 81)
+StatsPill.BorderSizePixel = 0
+StatsPill.Parent = StatsFrame
+
+local StatsPillCorner = Instance.new("UICorner")
+StatsPillCorner.CornerRadius = UDim.new(1, 0)
+StatsPillCorner.Parent = StatsPill
+
+local StatsKnob = Instance.new("Frame")
+StatsKnob.AnchorPoint = Vector2.new(1, 0.5)
+StatsKnob.Position = UDim2.new(1, -2, 0.5, 0)
+StatsKnob.Size = UDim2.fromOffset(10, 10)
+StatsKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+StatsKnob.BorderSizePixel = 0
+StatsKnob.Parent = StatsPill
+
+local StatsKnobCorner = Instance.new("UICorner")
+StatsKnobCorner.CornerRadius = UDim.new(1, 0)
+StatsKnobCorner.Parent = StatsKnob
+
+local StatsDragService = game:GetService("UserInputService")
+local statsDragging = false
+local statsDragStart = nil
+local statsStartPos = nil
+
+StatsFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        statsDragging = true
+        statsDragStart = input.Position
+        statsStartPos = StatsFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                statsDragging = false
+            end
+        end)
+    end
+end)
+
+StatsDragService.InputChanged:Connect(function(input)
+    if statsDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - statsDragStart
+        StatsFrame.Position = UDim2.new(
+            statsStartPos.X.Scale, statsStartPos.X.Offset + delta.X,
+            statsStartPos.Y.Scale, statsStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 if not pcall(function() StatsGui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end) then
     StatsGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
@@ -133,6 +175,7 @@ task.spawn(function()
     local frames = 0
     local acc = 0
     local ping = 0
+    local lastPing = 0
     local conn = RunServiceS.Heartbeat:Connect(function(dt)
         frames = frames + 1
         acc = acc + dt
@@ -145,7 +188,7 @@ task.spawn(function()
             ping = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
         end)
         pcall(function()
-            StatsLabel.Text = "FPS: " .. fps .. " | Пинг: " .. math.floor(ping) .. " мс"
+            StatsLabel.Text = "PULSAR 2.3 | FPS: " .. fps .. " | Пинг: " .. math.floor(ping) .. " мс"
         end)
         frames = 0
         acc = 0
@@ -180,6 +223,7 @@ local Window = Library:CreateWindow({
 })
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() PulsarLoaderComplete() end)
+pcall(function() StatsGui.Enabled = true end)
 
 local Tabs = {
     { Name = "Home",         Icon = "house" },
