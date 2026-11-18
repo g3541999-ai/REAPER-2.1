@@ -76,7 +76,7 @@ function PulsarLoaderComplete()
 end
 
 -- =====================================================================
--- КАРТОЧКА FPS | ПИНГ (одна строка, чёрная, перетаскиваемая)
+-- КАРТОЧКА FPS | ПИНГ (одна строка, чёрная, сверху по центру, перетаскиваемая)
 -- =====================================================================
 local LockGui = Instance.new("ScreenGui")
 LockGui.Name = "PulsarLock"
@@ -86,7 +86,7 @@ LockGui.IgnoreGuiInset = true
 LockGui.Enabled = false
 
 local LockButton = Instance.new("TextButton")
-LockButton.Position = UDim2.fromOffset(10, 10)
+LockButton.Position = UDim2.new(0.5, -145, 0, 10)
 LockButton.Size = UDim2.fromOffset(290, 36)
 LockButton.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 LockButton.BackgroundTransparency = 0
@@ -696,6 +696,353 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
             ApplyShader(currentShader, currentLevel)
         else
             RemoveShader()
+        end
+    end,
+})
+
+
+-- =====================================================================
+-- ВКЛАДКА PLAYER (функции Resonance, точь-в-точь из модулей)
+-- =====================================================================
+local PlayerTab = TabObjects["Player"]
+local PlayerLeft = PlayerTab:AddLeftGroupbox("Движение")
+local PlayerRight = PlayerTab:AddRightGroupbox("Телепорт")
+
+local PlayerState = { FlySpeed = 50, WalkSpeed = 100, JumpPower = 200, Gravity = 196.2 }
+
+local function Res_getChar()
+    local c = LocalPlayer and LocalPlayer.Character
+    if not c or not c.Parent then return nil end
+    return c
+end
+
+local function Res_getHum()
+    local char = Res_getChar()
+    local h = char and char:FindFirstChildOfClass("Humanoid")
+    if h and h.Health > 0 then return h end
+    return nil
+end
+
+local function Res_getHRP()
+    local char = Res_getChar()
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if root and root.Parent then return root end
+    return nil
+end
+
+local function Res_teleportTo(cf)
+    local root = Res_getHRP()
+    if root then pcall(function() root.CFrame = cf end) end
+end
+
+-- Func #101: Infinite Jump | toggle
+local ResInfJumpConn = nil
+PlayerLeft:AddToggle("ResInfiniteJump", {
+    Text = "Infinite Jump",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            PlayerState.InfiniteJump = true
+            ResInfJumpConn = game:GetService("UserInputService").JumpRequest:Connect(function()
+                if not PlayerState.InfiniteJump then return end
+                local hum = Res_getHum()
+                if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+            end)
+        else
+            PlayerState.InfiniteJump = false
+            if ResInfJumpConn then
+                ResInfJumpConn:Disconnect()
+                ResInfJumpConn = nil
+            end
+        end
+    end,
+})
+
+-- Func #102: Noclip | toggle
+local ResNoclipConn = nil
+PlayerLeft:AddToggle("ResNoclip", {
+    Text = "Noclip",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            PlayerState.NoclipMove = true
+            ResNoclipConn = game:GetService("RunService").Stepped:Connect(function()
+                if not PlayerState.NoclipMove then return end
+                local char = Res_getChar()
+                if not char then return end
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+        else
+            PlayerState.NoclipMove = false
+            if ResNoclipConn then
+                ResNoclipConn:Disconnect()
+                ResNoclipConn = nil
+            end
+            local char = Res_getChar()
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                        pcall(function() part.CanCollide = true end)
+                    end
+                end
+            end
+        end
+    end,
+})
+
+-- Func #103: Fly | toggle
+local ResFlyBV, ResFlyBG, ResFlyConn = nil, nil, nil
+PlayerLeft:AddSlider("ResFlySpeed", {
+    Text = "Fly Speed",
+    Default = 50,
+    Min = 10,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(v) PlayerState.FlySpeed = v end,
+})
+PlayerLeft:AddToggle("ResFly", {
+    Text = "Fly (WASD + Space/CTRL)",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            local hrp = Res_getHRP()
+            if not hrp then return end
+            ResFlyBV = Instance.new("BodyVelocity")
+            ResFlyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            ResFlyBV.Velocity = Vector3.new(0, 0, 0)
+            ResFlyBV.Parent = hrp
+
+            ResFlyBG = Instance.new("BodyGyro")
+            ResFlyBG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+            ResFlyBG.P = 1000
+            ResFlyBG.D = 50
+            ResFlyBG.Parent = hrp
+
+            local ResCamera = workspace.CurrentCamera
+            local ResUIS = game:GetService("UserInputService")
+            PlayerState.Fly = true
+            ResFlyConn = game:GetService("RunService").RenderStepped:Connect(function()
+                if not PlayerState.Fly then return end
+                local char = Res_getChar()
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if not root or not ResFlyBV then return end
+                local moveDir = Vector3.new()
+                if ResUIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + ResCamera.CFrame.LookVector end
+                if ResUIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - ResCamera.CFrame.LookVector end
+                if ResUIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - ResCamera.CFrame.RightVector end
+                if ResUIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + ResCamera.CFrame.RightVector end
+                if ResUIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+                if ResUIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+                ResFlyBV.Velocity = moveDir * (PlayerState.FlySpeed or 50)
+                ResFlyBG.CFrame = ResCamera.CFrame
+            end)
+        else
+            PlayerState.Fly = false
+            if ResFlyBV then ResFlyBV:Destroy(); ResFlyBV = nil end
+            if ResFlyBG then ResFlyBG:Destroy(); ResFlyBG = nil end
+            if ResFlyConn then
+                ResFlyConn:Disconnect()
+                ResFlyConn = nil
+            end
+        end
+    end,
+})
+
+-- Func #104: Speed Boost | toggle
+PlayerLeft:AddSlider("ResWalkSpeed", {
+    Text = "Walk Speed",
+    Default = 100,
+    Min = 16,
+    Max = 500,
+    Rounding = 0,
+    Callback = function(v)
+        PlayerState.WalkSpeed = v
+        if PlayerState.SpeedBoost then
+            local hum = Res_getHum()
+            if hum then hum.WalkSpeed = PlayerState.WalkSpeed or 100 end
+        end
+    end,
+})
+PlayerLeft:AddToggle("ResSpeedBoost", {
+    Text = "Speed Boost",
+    Default = false,
+    Callback = function(enabled)
+        PlayerState.SpeedBoost = enabled
+        local hum = Res_getHum()
+        if not hum then
+            local char = Res_getChar()
+            hum = char and char:FindFirstChildOfClass("Humanoid")
+        end
+        if enabled then
+            if hum then hum.WalkSpeed = PlayerState.WalkSpeed or 100 end
+        else
+            if hum then hum.WalkSpeed = 16 end
+        end
+    end,
+})
+
+-- Func #105: High Jump | toggle
+PlayerLeft:AddSlider("ResJumpPower", {
+    Text = "Jump Power",
+    Default = 200,
+    Min = 50,
+    Max = 500,
+    Rounding = 0,
+    Callback = function(v)
+        PlayerState.JumpPower = v
+        if PlayerState.HighJump then
+            local hum = Res_getHum()
+            if hum then hum.JumpPower = PlayerState.JumpPower or 200 end
+        end
+    end,
+})
+PlayerLeft:AddToggle("ResHighJump", {
+    Text = "High Jump",
+    Default = false,
+    Callback = function(enabled)
+        PlayerState.HighJump = enabled
+        local hum = Res_getHum()
+        if not hum then
+            local char = Res_getChar()
+            hum = char and char:FindFirstChildOfClass("Humanoid")
+        end
+        if enabled then
+            if hum then hum.JumpPower = PlayerState.JumpPower or 200 end
+        else
+            if hum then hum.JumpPower = 50 end
+        end
+    end,
+})
+
+-- Func #106: Low Gravity | toggle
+local ResOrigGravity = nil
+PlayerLeft:AddSlider("ResGravity", {
+    Text = "Gravity",
+    Default = 196,
+    Min = 20,
+    Max = 500,
+    Rounding = 0,
+    Callback = function(v) PlayerState.Gravity = v end,
+})
+PlayerLeft:AddToggle("ResLowGravity", {
+    Text = "Low Gravity",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            ResOrigGravity = workspace.Gravity
+            workspace.Gravity = (PlayerState.Gravity or 196.2) / 4
+        else
+            workspace.Gravity = ResOrigGravity or 196.2
+        end
+    end,
+})
+
+-- Func #107: Zero Gravity | toggle
+local ResOrigGravity2 = nil
+PlayerLeft:AddToggle("ResZeroGravity", {
+    Text = "Zero Gravity",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            ResOrigGravity2 = workspace.Gravity
+            workspace.Gravity = 0
+        else
+            workspace.Gravity = ResOrigGravity2 or 196.2
+        end
+    end,
+})
+
+-- Func #108: Auto Jump | toggle
+local ResAutoJumpState = { running = false }
+PlayerLeft:AddToggle("ResAutoJump", {
+    Text = "Auto Jump",
+    Default = false,
+    Callback = function(enabled)
+        if enabled then
+            ResAutoJumpState.running = true
+            task.spawn(function()
+                while ResAutoJumpState.running do
+                    task.wait(0.1)
+                    local hum = Res_getHum()
+                    if hum and hum.FloorMaterial ~= Enum.Material.Air then
+                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                end
+            end)
+        else
+            ResAutoJumpState.running = false
+        end
+    end,
+})
+
+-- Func #114: Teleport to Spawn | button
+PlayerRight:AddButton({
+    Text = "Teleport to Spawn",
+    Func = function()
+        local sp = workspace:FindFirstChildOfClass("SpawnLocation")
+        if not sp then
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("SpawnLocation") then sp = obj; break end
+            end
+        end
+        if sp then Res_teleportTo(sp.CFrame + Vector3.new(0, 5, 0)) end
+    end,
+})
+
+-- Func #115: Teleport to Random Player | button
+PlayerRight:AddButton({
+    Text = "Teleport to Random Player",
+    Func = function()
+        local list = Players:GetPlayers()
+        for i = #list, 1, -1 do
+            if list[i] == LocalPlayer then table.remove(list, i) end
+        end
+        local target = list[math.random(1, #list)]
+        if target and target.Character then
+            local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then Res_teleportTo(hrp.CFrame + Vector3.new(0, 3, 0)) end
+        end
+    end,
+})
+
+-- Func #116: Teleport Forward | button
+PlayerRight:AddButton({
+    Text = "Teleport Forward",
+    Func = function()
+        local hrp = Res_getHRP()
+        if hrp then Res_teleportTo(hrp.CFrame + hrp.CFrame.LookVector * 20 + Vector3.new(0, 3, 0)) end
+    end,
+})
+
+-- Func #117: Teleport Up | button
+PlayerRight:AddButton({
+    Text = "Teleport Up",
+    Func = function()
+        local hrp = Res_getHRP()
+        if hrp then Res_teleportTo(hrp.CFrame + Vector3.new(0, 50, 0)) end
+    end,
+})
+
+-- Func #118: Teleport Down | button
+PlayerRight:AddButton({
+    Text = "Teleport Down",
+    Func = function()
+        local hrp = Res_getHRP()
+        if hrp then Res_teleportTo(hrp.CFrame - Vector3.new(0, 50, 0)) end
+    end,
+})
+
+-- Func #119: Teleport to Cursor | button
+PlayerRight:AddButton({
+    Text = "Teleport to Cursor",
+    Func = function()
+        local mouse = LocalPlayer:GetMouse()
+        if mouse and mouse.Hit then
+            Res_teleportTo(mouse.Hit + Vector3.new(0, 3, 0))
         end
     end,
 })
