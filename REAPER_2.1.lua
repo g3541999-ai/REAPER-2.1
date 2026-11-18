@@ -2,6 +2,79 @@
 -- PULSAR 2.3 — OBSIDIAN EDITION + SAVITAR SHADERS
 -- ==========================================
 
+-- =====================================================================
+-- ЗАГРУЗОЧНЫЙ ЭКРАН (окно по центру, в линию, название скрипта)
+-- =====================================================================
+local loaderGui = Instance.new("ScreenGui")
+loaderGui.Name = "PulsarLoader"
+loaderGui.ResetOnSpawn = false
+loaderGui.DisplayOrder = 9999
+loaderGui.IgnoreGuiInset = true
+
+local loaderFrame = Instance.new("Frame")
+loaderFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+loaderFrame.Position = UDim2.fromScale(0.5, 0.5)
+loaderFrame.Size = UDim2.fromOffset(360, 46)
+loaderFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+loaderFrame.BorderSizePixel = 0
+loaderFrame.Parent = loaderGui
+
+local loaderCorner = Instance.new("UICorner")
+loaderCorner.CornerRadius = UDim.new(0, 8)
+loaderCorner.Parent = loaderFrame
+
+local loaderStroke = Instance.new("UIStroke")
+loaderStroke.Color = Color3.fromRGB(125, 85, 255)
+loaderStroke.Thickness = 1
+loaderStroke.Parent = loaderFrame
+
+local loaderTitle = Instance.new("TextLabel")
+loaderTitle.Size = UDim2.fromScale(1, 1)
+loaderTitle.BackgroundTransparency = 1
+loaderTitle.Text = "PULSAR 2.3"
+loaderTitle.TextColor3 = Color3.new(1, 1, 1)
+loaderTitle.Font = Enum.Font.GothamBold
+loaderTitle.TextSize = 16
+loaderTitle.Parent = loaderFrame
+
+local loaderBar = Instance.new("Frame")
+loaderBar.AnchorPoint = Vector2.new(0.5, 1)
+loaderBar.Position = UDim2.new(0.5, 0, 1, -5)
+loaderBar.Size = UDim2.new(1, -24, 0, 4)
+loaderBar.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+loaderBar.BorderSizePixel = 0
+loaderBar.Parent = loaderFrame
+
+local loaderFill = Instance.new("Frame")
+loaderFill.Size = UDim2.fromScale(0, 1)
+loaderFill.BackgroundColor3 = Color3.fromRGB(125, 85, 255)
+loaderFill.BorderSizePixel = 0
+loaderFill.Parent = loaderBar
+
+local loaderFillCorner = Instance.new("UICorner")
+loaderFillCorner.CornerRadius = UDim.new(0, 2)
+loaderFillCorner.Parent = loaderFill
+
+if not pcall(function() loaderGui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end) then
+    loaderGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
+task.spawn(function()
+    local progress = 0
+    while loaderGui.Parent do
+        progress = math.min(progress + 0.015, 0.9)
+        pcall(function() loaderFill.Size = UDim2.fromScale(progress, 1) end)
+        task.wait(0.05)
+    end
+end)
+
+function PulsarLoaderComplete()
+    if not loaderGui or not loaderGui.Parent then return end
+    pcall(function() loaderFill.Size = UDim2.fromScale(1, 1) end)
+    task.wait(0.35)
+    pcall(function() loaderGui:Destroy() end)
+end
+
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
 
 pcall(function()
@@ -17,6 +90,7 @@ local LocalPlayer = Players.LocalPlayer
 local Window = Library:CreateWindow({
     Title = "PULSAR 2.3",
     Footer = "Powered by Obsidian",
+    Size = UDim2.fromOffset(540, 420),
     Center = true,
     AutoShow = true,
     Resizable = true,
@@ -27,6 +101,7 @@ local Window = Library:CreateWindow({
     SidebarCompactWidth = 56,
 })
 pcall(function() Window:SetCornerRadius(8) end)
+pcall(function() PulsarLoaderComplete() end)
 
 local Tabs = {
     { Name = "Home",         Icon = "house" },
