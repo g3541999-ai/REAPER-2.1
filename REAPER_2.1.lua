@@ -780,53 +780,47 @@ local function ApplyShader(shaderName, level)
         pBloom.Threshold = 0.3
         pBloom.Size = 70
         pBloom.Intensity = 1
+        ShaderState.PulsarBloom = pBloom
         ActiveEffects[#ActiveEffects+1] = pBloom
 
-        local jetPart = Instance.new("Part")
-        jetPart.Name = "SavitarPulsarJets"
-        jetPart.Anchored = true
-        jetPart.CanCollide = false
-        jetPart.CanQuery = false
-        jetPart.Transparency = 1
-        jetPart.Size = Vector3.new(0.2, 0.2, 0.2)
-        jetPart.Parent = workspace
-        local jA0 = Instance.new("Attachment")
-        jA0.Name = "JetTop"
-        jA0.Position = Vector3.new(0, 5000, 0)
-        jA0.Parent = jetPart
-        local jA1 = Instance.new("Attachment")
-        jA1.Name = "JetBottom"
-        jA1.Position = Vector3.new(0, -5000, 0)
-        jA1.Parent = jetPart
-        local jAC = Instance.new("Attachment")
-        jAC.Name = "JetCenter"
-        jAC.Parent = jetPart
-        local jetColor = ColorSequence.new(Color3.fromRGB(150, 190, 255), Color3.fromRGB(255, 255, 255))
-        local jetTrans = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.12),
-            NumberSequenceKeypoint.new(0.5, 0.3),
-            NumberSequenceKeypoint.new(1, 0.85),
-        })
-        local jets = {}
-        for _, att in ipairs({ jA0, jA1 }) do
-            local beam = Instance.new("Beam")
-            beam.Name = "SavitarPulsarJet"
-            beam.Attachment0 = jAC
-            beam.Attachment1 = att
-            beam.Width0 = 70
-            beam.Width1 = 20
-            beam.Color = jetColor
-            beam.Transparency = jetTrans
-            beam.Brightness = 4
-            beam.LightEmission = 1
-            beam.LightInfluence = 0
-            beam.Segments = 1
-            beam.Parent = jetPart
-            ActiveEffects[#ActiveEffects+1] = beam
-            jets[#jets + 1] = beam
+        local jetRoot = Instance.new("Part")
+        jetRoot.Name = "SavitarPulsarJets"
+        jetRoot.Anchored = true
+        jetRoot.CanCollide = false
+        jetRoot.CanQuery = false
+        jetRoot.Transparency = 1
+        jetRoot.Size = Vector3.new(0.2, 0.2, 0.2)
+        jetRoot.Parent = workspace
+        local jetCore = Instance.new("Part")
+        jetCore.Name = "SavitarPulsarCore"
+        jetCore.Shape = Enum.PartType.Ball
+        jetCore.Anchored = true
+        jetCore.CanCollide = false
+        jetCore.CanQuery = false
+        jetCore.Material = Enum.Material.Neon
+        jetCore.Color = Color3.fromRGB(235, 242, 255)
+        jetCore.Transparency = 0.05
+        jetCore.Size = Vector3.new(260, 260, 260)
+        jetCore.Parent = jetRoot
+        local function PulsarJet(name)
+            local jet = Instance.new("Part")
+            jet.Name = name
+            jet.Shape = Enum.PartType.Cylinder
+            jet.Anchored = true
+            jet.CanCollide = false
+            jet.CanQuery = false
+            jet.Material = Enum.Material.Neon
+            jet.Color = Color3.fromRGB(225, 235, 255)
+            jet.Transparency = 0.1
+            jet.Size = Vector3.new(6000, 140, 140)
+            jet.Parent = jetRoot
+            ActiveEffects[#ActiveEffects+1] = jet
+            return jet
         end
-        ActiveEffects[#ActiveEffects+1] = jetPart
-        ShaderState.PulsarJets = { Part = jetPart, Beams = jets }
+        local jetTop = PulsarJet("SavitarPulsarJetTop")
+        local jetBot = PulsarJet("SavitarPulsarJetBot")
+        ActiveEffects[#ActiveEffects+1] = jetRoot
+        ShaderState.PulsarJets = { Part = jetRoot, Top = jetTop, Bot = jetBot, Core = jetCore }
 
         if not ShaderState.PulsarHooked then
             ShaderState.PulsarHooked = true
@@ -843,11 +837,15 @@ local function ApplyShader(shaderName, level)
                     local cam = workspace.CurrentCamera
                     if cam then
                         local pos = cam.CFrame.Position + cam.CFrame.LookVector * 3500
-                        jets.Part.CFrame = CFrame.lookAt(pos, pos + Vector3.new(0, 1, 0))
+                        local base = CFrame.new(pos) * CFrame.Angles(0, os.clock() * 1.6, 0) * CFrame.Angles(math.rad(22), 0, 0)
+                        jets.Part.CFrame = base
+                        jets.Top.CFrame = base * CFrame.new(0, 2900, 0) * CFrame.Angles(0, 0, math.rad(90))
+                        jets.Bot.CFrame = base * CFrame.new(0, -2900, 0) * CFrame.Angles(0, 0, math.rad(90))
+                        if jets.Core then jets.Core.CFrame = base end
                     end
-                    for _, beam in ipairs(jets.Beams) do
-                        beam.Brightness = (2.5 + 2.5 * ph) * t2
-                    end
+                    local jt = 0.08 + 0.25 * (1 - ph)
+                    if jets.Top then jets.Top.Transparency = jt end
+                    if jets.Bot then jets.Bot.Transparency = jt end
                 end
             end)
         end
@@ -1557,7 +1555,7 @@ do
     if not ParticlesBox then
         ParticlesBox = Graphics
         pcall(function()
-            Library:Notify("Particles: зависимый блок не поддерждан, элементы добавлены напрямую")
+            Library:Notify("Particles: зависимый блок не поддержан, элементы добавлены напрямую")
         end)
     end
 
