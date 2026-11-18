@@ -259,7 +259,7 @@ local Window = Library:CreateWindow({
     Footer = "Powered by Obsidian",
     Size = UDim2.fromOffset(540, 420),
     Center = true,
-    AutoShow = false,
+    AutoShow = true,
     Resizable = true,
     EnableSidebarResize = true,
     EnableCompacting = true,
@@ -268,32 +268,8 @@ local Window = Library:CreateWindow({
     SidebarCompactWidth = 56,
 })
 pcall(function() Window:SetCornerRadius(8) end)
-task.spawn(function()
-    pcall(function() PulsarLoaderComplete() end)
-    task.wait(2)
-    local WinScale = nil
-    pcall(function()
-        local Frame = Window.MainFrame
-        if Frame then
-            WinScale = Instance.new("UIScale")
-            WinScale.Scale = 0.4
-            WinScale.Parent = Frame
-        end
-    end)
-    pcall(function() Window:Show() end)
-    if WinScale then
-        pcall(function()
-            TweenService:Create(
-                WinScale,
-                TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-                { Scale = 1 }
-            ):Play()
-        end)
-        task.wait(0.45)
-        pcall(function() WinScale:Destroy() end)
-    end
-    pcall(function() LockGui.Enabled = true end)
-end)
+pcall(function() PulsarLoaderComplete() end)
+pcall(function() LockGui.Enabled = true end)
 
 local Tabs = {
     { Name = "Home",         Icon = "house" },
