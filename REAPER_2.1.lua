@@ -1446,6 +1446,13 @@ do
 
     local ParticlesBox = GfxDepbox({ { Library.Options.ParticlesT, true } })
 
+    if not ParticlesBox then
+        ParticlesBox = Graphics
+        pcall(function()
+            Library:Notify("Particles: зависимый блок не поддержан, элементы добавлены напрямую")
+        end)
+    end
+
     if ParticlesBox then
         ParticlesBox:AddDropdown("ParticlesDropdown", {
             Values = ParticleTextureOrder,
