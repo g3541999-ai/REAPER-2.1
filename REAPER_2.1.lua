@@ -67,7 +67,10 @@ HomeGroup:AddImage("LocalAvatar", {
 
 HomeGroup:AddLabel("PULSAR 2.3 — Obsidian Edition")
 
+local ScriptStartTime = os.clock()
+
 local TimeLabel = HomeGroup:AddLabel("Время: " .. os.date("%H:%M:%S"))
+local UptimeLabel = HomeGroup:AddLabel("Запущено: 0:00")
 
 task.spawn(function()
     while not Library.Unloaded do
@@ -76,6 +79,21 @@ task.spawn(function()
         pcall(function() TimeLabel:SetText(t) end)
         pcall(function() TimeLabel.Text = t end)
         pcall(function() TimeLabel.TextLabel.Text = t end)
+
+        local secs = math.floor(os.clock() - ScriptStartTime)
+        local h = math.floor(secs / 3600)
+        local m = math.floor((secs % 3600) / 60)
+        local s = secs % 60
+        local up
+        if h > 0 then
+            up = string.format("%d:%02d:%02d", h, m, s)
+        else
+            up = string.format("%d:%02d", m, s)
+        end
+        local u = "Запущено: " .. up
+        pcall(function() UptimeLabel:SetText(u) end)
+        pcall(function() UptimeLabel.Text = u end)
+        pcall(function() UptimeLabel.TextLabel.Text = u end)
     end
 end)
 
