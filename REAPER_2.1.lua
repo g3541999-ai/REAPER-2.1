@@ -76,103 +76,67 @@ function PulsarLoaderComplete()
 end
 
 -- =====================================================================
--- ОКНО FPS | ПИНГ (левый верх, чёрная карточка, перетаскиваемая)
+-- КНОПКА-ЗАМОК (декоративная, без функций, перетаскиваемая)
 -- =====================================================================
-local StatsGui = Instance.new("ScreenGui")
-StatsGui.Name = "PulsarStats"
-StatsGui.ResetOnSpawn = false
-StatsGui.DisplayOrder = 9998
-StatsGui.IgnoreGuiInset = true
-StatsGui.Enabled = false
+local LockGui = Instance.new("ScreenGui")
+LockGui.Name = "PulsarLock"
+LockGui.ResetOnSpawn = false
+LockGui.DisplayOrder = 9998
+LockGui.IgnoreGuiInset = true
+LockGui.Enabled = false
 
-local StatsFrame = Instance.new("Frame")
-StatsFrame.AnchorPoint = Vector2.new(0, 0)
-StatsFrame.Position = UDim2.fromOffset(10, 10)
-StatsFrame.Size = UDim2.fromOffset(290, 36)
-StatsFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
-StatsFrame.BorderSizePixel = 0
-StatsFrame.Active = true
-StatsFrame.Parent = StatsGui
+local LockButton = Instance.new("TextButton")
+LockButton.Position = UDim2.fromOffset(10, 10)
+LockButton.Size = UDim2.fromOffset(36, 36)
+LockButton.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+LockButton.BorderSizePixel = 0
+LockButton.Text = "🔒"
+LockButton.TextSize = 18
+LockButton.TextColor3 = Color3.new(1, 1, 1)
+LockButton.AutoButtonColor = false
+LockButton.Parent = LockGui
 
-local StatsCorner = Instance.new("UICorner")
-StatsCorner.CornerRadius = UDim.new(0, 8)
-StatsCorner.Parent = StatsFrame
+local LockCorner = Instance.new("UICorner")
+LockCorner.CornerRadius = UDim.new(0, 8)
+LockCorner.Parent = LockButton
 
-local StatsStroke = Instance.new("UIStroke")
-StatsStroke.Color = Color3.fromRGB(45, 45, 50)
-StatsStroke.Thickness = 1
-StatsStroke.Parent = StatsFrame
+local LockStroke = Instance.new("UIStroke")
+LockStroke.Color = Color3.fromRGB(45, 45, 50)
+LockStroke.Thickness = 1
+LockStroke.Parent = LockButton
 
-local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(1, -20, 1, 0)
-StatsLabel.Position = UDim2.fromOffset(10, 0)
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.Text = "PULSAR 2.3 | FPS: 0 | Пинг: 0 мс"
-StatsLabel.TextColor3 = Color3.new(1, 1, 1)
-StatsLabel.Font = Enum.Font.Gotham
-StatsLabel.TextSize = 12
-StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatsLabel.Parent = StatsFrame
+local LockInput = game:GetService("UserInputService")
+local lockDragging = false
+local lockDragStart = nil
+local lockStartPos = nil
 
-local StatsDragService = game:GetService("UserInputService")
-local statsDragging = false
-local statsDragStart = nil
-local statsStartPos = nil
-
-StatsFrame.InputBegan:Connect(function(input)
+LockButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        statsDragging = true
-        statsDragStart = input.Position
-        statsStartPos = StatsFrame.Position
+        lockDragging = true
+        lockDragStart = input.Position
+        lockStartPos = LockButton.Position
     end
 end)
 
-StatsDragService.InputEnded:Connect(function(input)
+LockInput.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        statsDragging = false
+        lockDragging = false
     end
 end)
 
-StatsDragService.InputChanged:Connect(function(input)
-    if statsDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - statsDragStart
-        StatsFrame.Position = UDim2.new(
-            statsStartPos.X.Scale, statsStartPos.X.Offset + delta.X,
-            statsStartPos.Y.Scale, statsStartPos.Y.Offset + delta.Y
+LockInput.InputChanged:Connect(function(input)
+    if lockDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - lockDragStart
+        LockButton.Position = UDim2.new(
+            lockStartPos.X.Scale, lockStartPos.X.Offset + delta.X,
+            lockStartPos.Y.Scale, lockStartPos.Y.Offset + delta.Y
         )
     end
 end)
 
-if not pcall(function() StatsGui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end) then
-    StatsGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+if not pcall(function() LockGui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end) then
+    LockGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 end
-
-task.spawn(function()
-    local RunServiceS = game:GetService("RunService")
-    local StatsService = game:GetService("Stats")
-    local frames = 0
-    local acc = 0
-    local ping = 0
-    local lastPing = 0
-    local conn = RunServiceS.Heartbeat:Connect(function(dt)
-        frames = frames + 1
-        acc = acc + dt
-    end)
-    while StatsGui.Parent do
-        task.wait(1)
-        local fps = 0
-        if acc > 0 then fps = math.floor(frames / acc + 0.5) end
-        pcall(function()
-            ping = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
-        end)
-        pcall(function()
-            StatsLabel.Text = "PULSAR 2.3 | FPS: " .. fps .. " | Пинг: " .. math.floor(ping) .. " мс"
-        end)
-        frames = 0
-        acc = 0
-    end
-    pcall(function() conn:Disconnect() end)
-end)
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
 
@@ -201,7 +165,7 @@ local Window = Library:CreateWindow({
 })
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() PulsarLoaderComplete() end)
-pcall(function() StatsGui.Enabled = true end)
+pcall(function() LockGui.Enabled = true end)
 
 local Tabs = {
     { Name = "Home",         Icon = "house" },
