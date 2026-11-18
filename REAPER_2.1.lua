@@ -266,6 +266,8 @@ local Window = Library:CreateWindow({
     SidebarCompacted = true,
     MinSidebarWidth = 200,
     SidebarCompactWidth = 56,
+    ToggleKeybind = Enum.KeyCode.M,
+    ShowMobileButtons = true,
 })
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() PulsarLoaderComplete() end)
@@ -294,7 +296,7 @@ end
 local HomeGroup = TabObjects["Home"]:AddLeftGroupbox("Main Functions")
 
 local HotkeyGroup = TabObjects["Home"]:AddLeftGroupbox("Горячие клавиши")
-HotkeyGroup:AddLabel("Right Shift — открыть/закрыть меню")
+HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть меню (на телефоне — экранные кнопки)")
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 12")
