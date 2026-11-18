@@ -311,7 +311,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 12")
-StatsGroup:AddLabel("Шейдеров: 10")
+StatsGroup:AddLabel("Шейдеров: 11")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -551,21 +551,28 @@ local ShaderPresets = {
         ColorCorrection={Saturation=-0.12,Contrast=0.18,TintColor=Color3.fromRGB(215,220,235)},
         Atmosphere={Density=0.3,Offset=0.2,Haze=1.6,Glare=0.05,Color=Color3.fromRGB(90,95,115),Decay=Color3.fromRGB(80,85,105)},
     },
-    ["Чёрная дыра"] = {
-        Lighting = { Brightness=1.7, ClockTime=0, FogEnd=20000, FogStart=0, FogColor=Color3.fromRGB(60,58,80), ExposureCompensation=0.3, ShadowSoftness=0.3, Ambient=Color3.fromRGB(48,46,70), ColorShift_Top=Color3.fromRGB(120,90,190), OutdoorAmbient=Color3.fromRGB(70,62,110) },
-        Bloom={Intensity=0.9,Threshold=0.7,Size=50}, Blur={Size=0.2},
-        ColorCorrection={Saturation=-0.1,Contrast=0.22,TintColor=Color3.fromRGB(240,236,255)},
-        Atmosphere={Density=0.12,Offset=0.1,Haze=0.5,Glare=0,Color=Color3.fromRGB(90,70,150),Decay=Color3.fromRGB(40,28,80)},
+    ["Синтвейв"] = {
+        Lighting = { Brightness=2.3, ClockTime=18.3, FogEnd=3500, FogStart=0, FogColor=Color3.fromRGB(180,80,200), ExposureCompensation=0.15, ShadowSoftness=0.3, Ambient=Color3.fromRGB(90,40,120), ColorShift_Bottom=Color3.fromRGB(70,0,95), ColorShift_Top=Color3.fromRGB(255,110,230), OutdoorAmbient=Color3.fromRGB(150,60,140) },
+        Bloom={Intensity=0.9,Threshold=0.75,Size=60},
+        ColorCorrection={Saturation=0.35,Contrast=0.25,TintColor=Color3.fromRGB(255,205,255)},
+        SunRays={Intensity=0.12,Spread=0.7},
+        Atmosphere={Density=0.35,Offset=0.15,Haze=2.0,Glare=0.3,Color=Color3.fromRGB(255,150,220),Decay=Color3.fromRGB(140,60,150)},
     },
-    ["Пульсар"] = {
-        Lighting = { Brightness=1.45, ClockTime=13.5, FogEnd=20000, ExposureCompensation=-0.05, ShadowSoftness=0.55, Ambient=Color3.fromRGB(52,56,74), ColorShift_Top=Color3.fromRGB(140,165,255), OutdoorAmbient=Color3.fromRGB(62,72,110) },
-        ColorCorrection={Brightness=0.02,Saturation=-0.08,Contrast=0.22,TintColor=Color3.fromRGB(220,228,255)},
-        SunRays={Intensity=0.2,Spread=0.6},
-        Atmosphere={Density=0.12,Offset=0.15,Haze=0.5,Glare=0.1,Color=Color3.fromRGB(110,125,180),Decay=Color3.fromRGB(60,68,100)},
+    ["Кровавая луна"] = {
+        Lighting = { Brightness=0.9, ClockTime=0, FogEnd=1200, FogStart=0, FogColor=Color3.fromRGB(90,12,12), ExposureCompensation=0.08, ShadowSoftness=0, Ambient=Color3.fromRGB(55,6,6), ColorShift_Top=Color3.fromRGB(170,40,40), OutdoorAmbient=Color3.fromRGB(80,12,12) },
+        Bloom={Intensity=0.7,Threshold=0.7,Size=44},
+        ColorCorrection={Saturation=-0.2,Contrast=0.3,TintColor=Color3.fromRGB(255,180,180)},
+        Atmosphere={Density=0.55,Offset=0.2,Haze=2.4,Glare=0.1,Color=Color3.fromRGB(150,25,25),Decay=Color3.fromRGB(70,8,8)},
+    },
+    ["Глубокий космос"] = {
+        Lighting = { Brightness=1.6, ClockTime=0, FogEnd=100000, ExposureCompensation=0.12, ShadowSoftness=0.4, Ambient=Color3.fromRGB(24,22,48), ColorShift_Top=Color3.fromRGB(120,110,220), OutdoorAmbient=Color3.fromRGB(45,42,85) },
+        Bloom={Intensity=1.0,Threshold=0.6,Size=60},
+        ColorCorrection={Saturation=-0.1,Contrast=0.25,TintColor=Color3.fromRGB(205,205,255)},
+        Atmosphere={Density=0.15,Offset=0.15,Haze=0.7,Glare=0.2,Color=Color3.fromRGB(120,115,255),Decay=Color3.fromRGB(55,50,130)},
     },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful", "Thunderstorm", "Чёрная дыра", "Пульсар" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful", "Thunderstorm", "Синтвейв", "Кровавая луна", "Глубокий космос" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -741,114 +748,53 @@ local function ApplyShader(shaderName, level)
         end
     end
 
-    if shaderName == "Чёрная дыра" then
-        local bhBlack = "rbxasset://textures/blackBkg_square.png"
-        local bhSky = Instance.new("Sky", Lighting)
-        bhSky.Name = "SavitarBHSky"
-        bhSky.SkyboxFt = "rbxassetid://5436396975"
-        bhSky.SkyboxBk = bhBlack
-        bhSky.SkyboxLf = bhBlack
-        bhSky.SkyboxRt = bhBlack
-        bhSky.SkyboxUp = bhBlack
-        bhSky.SkyboxDn = bhBlack
-        bhSky.SunTextureId = "rbxassetid://5436396975"
-        bhSky.CelestialBodiesShown = true
-        bhSky.SunAngularSize = 40
-        bhSky.MoonAngularSize = 0
-        bhSky.StarCount = 1500
-        ActiveEffects[#ActiveEffects+1] = bhSky
+    if shaderName == "Синтвейв" then
+        local swSky = Instance.new("Sky", Lighting)
+        swSky.Name = "SavitarSynthSky"
+        swSky.SkyboxUp = "rbxassetid://323493360"
+        swSky.SkyboxLf = "rbxassetid://323494252"
+        swSky.SkyboxBk = "rbxassetid://323494035"
+        swSky.SkyboxFt = "rbxassetid://323494130"
+        swSky.SkyboxDn = "rbxassetid://323494368"
+        swSky.SkyboxRt = "rbxassetid://323494067"
+        swSky.SunAngularSize = 30
+        swSky.StarCount = 1500
+        ActiveEffects[#ActiveEffects+1] = swSky
     end
 
-    if shaderName == "Пульсар" then
-        local pBlack = "rbxasset://textures/blackBkg_square.png"
-        local pSky = Instance.new("Sky", Lighting)
-        pSky.Name = "SavitarPulsarSky"
-        pSky.SkyboxBk = pBlack
-        pSky.SkyboxFt = pBlack
-        pSky.SkyboxLf = pBlack
-        pSky.SkyboxRt = pBlack
-        pSky.SkyboxUp = pBlack
-        pSky.SkyboxDn = pBlack
-        pSky.CelestialBodiesShown = true
-        pSky.SunAngularSize = 25
-        pSky.MoonAngularSize = 0
-        pSky.StarCount = 3000
-        pSky.SunTextureId = "rbxasset://textures/particles/sparkles_main.dds"
-        ActiveEffects[#ActiveEffects+1] = pSky
-        local pBloom = Instance.new("BloomEffect", Lighting)
-        pBloom.Name = "SavitarPulsarBloom"
-        pBloom.Threshold = 0.3
-        pBloom.Size = 70
-        pBloom.Intensity = 1
-        ShaderState.PulsarBloom = pBloom
-        ActiveEffects[#ActiveEffects+1] = pBloom
+    if shaderName == "Кровавая луна" then
+        local bmBlack = "rbxasset://textures/blackBkg_square.png"
+        local bmSky = Instance.new("Sky", Lighting)
+        bmSky.Name = "SavitarBloodSky"
+        bmSky.SkyboxBk = bmBlack
+        bmSky.SkyboxFt = bmBlack
+        bmSky.SkyboxLf = bmBlack
+        bmSky.SkyboxRt = bmBlack
+        bmSky.SkyboxUp = bmBlack
+        bmSky.SkyboxDn = bmBlack
+        bmSky.MoonTextureId = "rbxassetid://6437960440"
+        bmSky.MoonAngularSize = 32
+        bmSky.SunAngularSize = 0
+        bmSky.CelestialBodiesShown = true
+        bmSky.StarCount = 1000
+        ActiveEffects[#ActiveEffects+1] = bmSky
+    end
 
-        local jetRoot = Instance.new("Part")
-        jetRoot.Name = "SavitarPulsarJets"
-        jetRoot.Anchored = true
-        jetRoot.CanCollide = false
-        jetRoot.CanQuery = false
-        jetRoot.Transparency = 1
-        jetRoot.Size = Vector3.new(0.2, 0.2, 0.2)
-        jetRoot.Parent = workspace
-        local jetCore = Instance.new("Part")
-        jetCore.Name = "SavitarPulsarCore"
-        jetCore.Shape = Enum.PartType.Ball
-        jetCore.Anchored = true
-        jetCore.CanCollide = false
-        jetCore.CanQuery = false
-        jetCore.Material = Enum.Material.Neon
-        jetCore.Color = Color3.fromRGB(235, 242, 255)
-        jetCore.Transparency = 0.05
-        jetCore.Size = Vector3.new(260, 260, 260)
-        jetCore.Parent = jetRoot
-        local function PulsarJet(name)
-            local jet = Instance.new("Part")
-            jet.Name = name
-            jet.Shape = Enum.PartType.Cylinder
-            jet.Anchored = true
-            jet.CanCollide = false
-            jet.CanQuery = false
-            jet.Material = Enum.Material.Neon
-            jet.Color = Color3.fromRGB(225, 235, 255)
-            jet.Transparency = 0.1
-            jet.Size = Vector3.new(6000, 140, 140)
-            jet.Parent = jetRoot
-            ActiveEffects[#ActiveEffects+1] = jet
-            return jet
-        end
-        local jetTop = PulsarJet("SavitarPulsarJetTop")
-        local jetBot = PulsarJet("SavitarPulsarJetBot")
-        ActiveEffects[#ActiveEffects+1] = jetRoot
-        ShaderState.PulsarJets = { Part = jetRoot, Top = jetTop, Bot = jetBot, Core = jetCore }
-
-        if not ShaderState.PulsarHooked then
-            ShaderState.PulsarHooked = true
-            AddUpdater(function()
-                local b = ShaderState.PulsarBloom
-                if not (ShaderState.Active and ShaderState.CurrentName == "Пульсар" and b and b.Parent) then return end
-                local ph = 0.5 + 0.5 * math.sin(os.clock() * 2.4)
-                local t2 = (tonumber(ShaderState.Level) or 8) / 10
-                local pre = ShaderPresets["Пульсар"]
-                b.Intensity = (0.5 + 2.5 * ph * ph) * t2
-                Lighting.Brightness = lerpNum(Original.Lighting.Brightness, pre.Lighting.Brightness, t2) * (0.95 + 0.45 * ph)
-                local jets = ShaderState.PulsarJets
-                if jets and jets.Part and jets.Part.Parent then
-                    local cam = workspace.CurrentCamera
-                    if cam then
-                        local pos = cam.CFrame.Position + cam.CFrame.LookVector * 3500
-                        local base = CFrame.new(pos) * CFrame.Angles(0, os.clock() * 1.6, 0) * CFrame.Angles(math.rad(22), 0, 0)
-                        jets.Part.CFrame = base
-                        jets.Top.CFrame = base * CFrame.new(0, 2900, 0) * CFrame.Angles(0, 0, math.rad(90))
-                        jets.Bot.CFrame = base * CFrame.new(0, -2900, 0) * CFrame.Angles(0, 0, math.rad(90))
-                        if jets.Core then jets.Core.CFrame = base end
-                    end
-                    local jt = 0.08 + 0.25 * (1 - ph)
-                    if jets.Top then jets.Top.Transparency = jt end
-                    if jets.Bot then jets.Bot.Transparency = jt end
-                end
-            end)
-        end
+    if shaderName == "Глубокий космос" then
+        local spBlack = "rbxasset://textures/blackBkg_square.png"
+        local spSky = Instance.new("Sky", Lighting)
+        spSky.Name = "SavitarSpaceSky"
+        spSky.SkyboxBk = spBlack
+        spSky.SkyboxFt = spBlack
+        spSky.SkyboxLf = spBlack
+        spSky.SkyboxRt = spBlack
+        spSky.SkyboxUp = spBlack
+        spSky.SkyboxDn = spBlack
+        spSky.SunAngularSize = 0
+        spSky.MoonAngularSize = 0
+        spSky.CelestialBodiesShown = true
+        spSky.StarCount = 5000
+        ActiveEffects[#ActiveEffects+1] = spSky
     end
 
     if shaderName == "Thunderstorm" then
@@ -1079,13 +1025,13 @@ local function RestoreSound(obj)
 end
 
 local SoundCategories = {
-    { Name = "Ambience",     Text = "Mute Ambience",              Patterns = { "ambien", "wind", "birds" } },
-    { Name = "Boombox",      Text = "Mute Boomboxes & Jukeboxes", Patterns = { "boombox", "jukebox" } },
-    { Name = "Screams",      Text = "Mute Screams",               Patterns = { "scream", "yell", "panic" } },
-    { Name = "Explosions",   Text = "Mute Explosions",            Patterns = { "explos", "boom" } },
-    { Name = "Soundwaves",   Text = "Mute Soundwaves",            Patterns = { "soundwave", "sound wave" } },
-    { Name = "RhythmMakers", Text = "Mute Rhythm Makers",         Patterns = { "rhythm" } },
-    { Name = "Instruments",  Text = "Mute Instruments",           Patterns = { "instrument", "piano", "drum", "guitar", "trumpet", "flute", "violin" } },
+    { Name = "Ambience",     Text = "Mute Ambience",              Patterns = { "ambien", "wind", "birds", "bird", "nature", "crowd", "city", "forest", "ocean", "rain" } },
+    { Name = "Boombox",      Text = "Mute Boomboxes & Jukeboxes", Patterns = { "boombox", "jukebox", "radio", "speaker", "stereo", "music", "cassette", "tape", "gramophone" } },
+    { Name = "Screams",      Text = "Mute Screams",               Patterns = { "scream", "yell", "shout", "panic", "horror", "crying", "squeal" } },
+    { Name = "Explosions",   Text = "Mute Explosions",            Patterns = { "explos", "blast", "grenade", "bomb", "rocket", "cannon", "firework", "gunshot", "shot", "bang" } },
+    { Name = "Soundwaves",   Text = "Mute Soundwaves",            Patterns = { "soundwave", "sound wave", "siren", "alarm", "airhorn", "megaphone" } },
+    { Name = "RhythmMakers", Text = "Mute Rhythm Makers",         Patterns = { "rhythm", "beatbox", "metronome", "melody", "tempo", "beat" } },
+    { Name = "Instruments",  Text = "Mute Instruments",           Patterns = { "instrument", "piano", "drum", "guitar", "trumpet", "flute", "violin", "sax", "banjo", "harp", "xylophone", "accordion", "chime" } },
     { Name = "Ragdoll",      Text = "Mute Ragdoll Sounds",        Patterns = { "ragdoll", "bodyfall", "thud", "splat", "bonk" } },
 }
 
@@ -1118,10 +1064,53 @@ local function UninstallGroup(group)
     pcall(function() group:Destroy() end)
 end
 
+local MuteScanRunning = false
+
+local function MuteScanOnce()
+    pcall(function()
+        for obj in pairs(MutedOriginals) do
+            if typeof(obj) ~= "Instance" or not obj.Parent then
+                MutedOriginals[obj] = nil
+            end
+        end
+    end)
+    local t0 = os.clock()
+    pcall(function()
+        for _, obj in ipairs(game:GetDescendants()) do
+            if obj:IsA("Sound") then
+                for _, cat2 in ipairs(SoundCategories) do
+                    if cat2.Group and MatchesPatterns(obj, cat2.Patterns) then
+                        TryMuteSound(obj, cat2)
+                    end
+                end
+            end
+            if os.clock() - t0 > 0.15 then
+                task.wait()
+                t0 = os.clock()
+            end
+        end
+    end)
+end
+
 local function UpdateMuteWatcher()
     local anyActive = false
     for _, cat in ipairs(SoundCategories) do
         if cat.Group then anyActive = true break end
+    end
+    if anyActive and not MuteScanRunning then
+        MuteScanRunning = true
+        task.spawn(function()
+            while true do
+                task.wait(3)
+                local any = false
+                for _, c in ipairs(SoundCategories) do
+                    if c.Group then any = true break end
+                end
+                if not any then break end
+                MuteScanOnce()
+            end
+            MuteScanRunning = false
+        end)
     end
     if anyActive and not MuteSoundConn then
         MuteSoundConn = game.DescendantAdded:Connect(function(obj)
@@ -1136,6 +1125,7 @@ local function UpdateMuteWatcher()
                 end
             end)
         end)
+        task.defer(MuteScanOnce)
     elseif not anyActive and MuteSoundConn then
         MuteSoundConn:Disconnect()
         MuteSoundConn = nil
@@ -1546,17 +1536,13 @@ do
         ["Paw"] = "rbxassetid://6803084085",
         ["Lightning"] = "rbxassetid://6772766551",
         ["Explosion"] = "rbxassetid://5833235272",
-        ["Skull"] = "rbxassetid://2682121938",
     }
-    local ParticleTextureOrder = { "Dot", "Sparkles", "Fire", "Smoke", "Sparks", "Star", "Star Small", "Heart", "Diamond", "Leaf", "Paw", "Lightning", "Explosion", "Skull" }
+    local ParticleTextureOrder = { "Dot", "Sparkles", "Fire", "Smoke", "Sparks", "Star", "Star Small", "Heart", "Diamond", "Leaf", "Paw", "Lightning", "Explosion" }
 
     local ParticlesBox = GfxDepbox({ { Library.Options.ParticlesT, true } })
 
     if not ParticlesBox then
         ParticlesBox = Graphics
-        pcall(function()
-            Library:Notify("Particles: зависимый блок не поддержан, элементы добавлены напрямую")
-        end)
     end
 
     if ParticlesBox then
