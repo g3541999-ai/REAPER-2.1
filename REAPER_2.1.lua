@@ -15,11 +15,13 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = Library:CreateWindow({
-    Title = "《 PULSAR 2.3 》",
+    Title = "PULSAR 2.3",
     Footer = "Powered by Obsidian",
     Size = UDim2.fromOffset(600, 400),
     Center = true,
     AutoShow = true,
+    EnableCompacting = true,
+    SidebarCompacted = false,
 })
 
 local Tabs = {
@@ -77,29 +79,70 @@ HomeGroup:AddButton({
     end
 })
 
+local function CopyText(text)
+    if type(text) ~= "string" or text == "" then return false end
+    local ok = pcall(function() setclipboard(text) end)
+    if not ok then
+        ok = pcall(function() toclipboard(text) end)
+    end
+    return ok
+end
+
+local PlayerImages = {}
+local function BuildPlayerValues()
+    local values = {}
+    PlayerImages = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        values[#values + 1] = plr.Name
+        PlayerImages[plr.Name] = "rbxthumb://type=AvatarHeadShot&w=48&h=48&id=" .. plr.UserId
+    end
+    return values
+end
+
 HomeGroup:AddDropdown("CopyPlayerDropdown", {
-    SpecialType = "Player",
-    Multi = false,
+    Values = BuildPlayerValues(),
+    ValueImages = PlayerImages,
+    Multi = true,
     AllowNull = true,
     Searchable = true,
-    Text = "Игрок для копирования",
+    MaxVisibleDropdownItems = 4,
+    Text = "Игроки (аватарки)",
     Callback = function() end,
 })
+
+local function RefreshPlayerList()
+    pcall(function()
+        local opts = Library.Options.CopyPlayerDropdown
+        if not opts then return end
+        opts.Values = BuildPlayerValues()
+        opts.ValueImages = PlayerImages
+        opts:SetValue(nil)
+    end)
+end
+
+Players.PlayerAdded:Connect(function() task.defer(RefreshPlayerList) end)
+Players.PlayerRemoving:Connect(function() task.defer(RefreshPlayerList) end)
 
 HomeGroup:AddButton({
     Text = "Копировать ник",
     Func = function()
+        local val = nil
+        pcall(function() val = Library.Options.CopyPlayerDropdown.Value end)
         local name = nil
-        pcall(function() name = Library.Options.CopyPlayerDropdown.Value end)
-        if not name or name == "" then
+        if type(val) == "table" then
+            for n in pairs(val) do name = n break end
+        elseif type(val) == "string" then
+            name = val
+        end
+        if type(name) ~= "string" or name == "" then
             Library:Notify("Сначала выбери игрока в списке выше")
             return
         end
-        local ok = pcall(function() setclipboard(name) end)
-        if not ok then
-            ok = pcall(function() toclipboard(name) end)
+        if CopyText(name) then
+            Library:Notify("Скопировано: " .. name)
+        else
+            Library:Notify("Копирование не поддерживается инжектором")
         end
-        Library:Notify(ok and ("Скопировано: " .. name) or "Копирование не поддерживается инжектором")
     end
 })
 
@@ -110,12 +153,11 @@ HomeGroup:AddButton({
         for _, plr in ipairs(Players:GetPlayers()) do
             names[#names + 1] = plr.Name
         end
-        local text = table.concat(names, "\n")
-        local ok = pcall(function() setclipboard(text) end)
-        if not ok then
-            ok = pcall(function() toclipboard(text) end)
+        if CopyText(table.concat(names, "\n")) then
+            Library:Notify("Скопировано ников: " .. #names)
+        else
+            Library:Notify("Копирование не поддерживается инжектором")
         end
-        Library:Notify(ok and ("Скопировано ников: " .. #names) or "Копирование не поддерживается инжектором")
     end
 })
 
@@ -432,4 +474,25 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
             RemoveShader()
         end
     end,
-}) 
+})
+
+
+-- =====================================================================
+-- ВКЛАДКА SETTINGS (Interface)
+-- =====================================================================
+local SettingsGroup = TabObjects["Settings"]:AddLeftGroupbox("Interface")
+
+SettingsGroup:AddToggle("HideTabText", {
+    Text = "Скрывать текст вкладок",
+    Default = false,
+    Callback = function(on)
+        local ok = pcall(function() Window:SetSidebarCompacted(on) end)
+        if not ok then
+            ok = pcall(function()
+                Window.SidebarCompacted = on
+                if Window.UpdateCompacting then Window:UpdateCompacting() end
+            end)
+        end
+        Library:Notify(ok and (on and "Текст вкладок скрыт" or "Текст вкладок показан") or "Не поддерживается этой версией Obsidian")
+    end,
+})
