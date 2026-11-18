@@ -76,7 +76,7 @@ function PulsarLoaderComplete()
 end
 
 -- =====================================================================
--- КНОПКА-ЗАМОК (декоративная, без функций, перетаскиваемая)
+-- КАРТОЧКА FPS | ПИНГ (одна строка, чёрная, перетаскиваемая)
 -- =====================================================================
 local LockGui = Instance.new("ScreenGui")
 LockGui.Name = "PulsarLock"
@@ -87,12 +87,14 @@ LockGui.Enabled = false
 
 local LockButton = Instance.new("TextButton")
 LockButton.Position = UDim2.fromOffset(10, 10)
-LockButton.Size = UDim2.fromOffset(36, 36)
+LockButton.Size = UDim2.fromOffset(290, 36)
 LockButton.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 LockButton.BorderSizePixel = 0
-LockButton.Text = "🔒"
-LockButton.TextSize = 18
+LockButton.Text = "PULSAR 2.3 | FPS: 0 || Пинг: 0 мс"
+LockButton.TextSize = 12
 LockButton.TextColor3 = Color3.new(1, 1, 1)
+LockButton.Font = Enum.Font.Gotham
+LockButton.TextXAlignment = Enum.TextXAlignment.Left
 LockButton.AutoButtonColor = false
 LockButton.Parent = LockGui
 
@@ -137,6 +139,32 @@ end)
 if not pcall(function() LockGui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end) then
     LockGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 end
+
+task.spawn(function()
+    local RunServiceS = game:GetService("RunService")
+    local StatsService = game:GetService("Stats")
+    local frames = 0
+    local acc = 0
+    local ping = 0
+    local conn = RunServiceS.Heartbeat:Connect(function(dt)
+        frames = frames + 1
+        acc = acc + dt
+    end)
+    while LockGui.Parent do
+        task.wait(1)
+        local fps = 0
+        if acc > 0 then fps = math.floor(frames / acc + 0.5) end
+        pcall(function()
+            ping = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+        end)
+        pcall(function()
+            LockButton.Text = "PULSAR 2.3 | FPS: " .. fps .. " || Пинг: " .. math.floor(ping) .. " мс"
+        end)
+        frames = 0
+        acc = 0
+    end
+    pcall(function() conn:Disconnect() end)
+end)
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
 
