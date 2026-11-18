@@ -16,6 +16,7 @@ local loaderBack = Instance.new("Frame")
 loaderBack.Size = UDim2.fromScale(1, 1)
 loaderBack.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
 loaderBack.BackgroundTransparency = 1
+loaderBack.Active = false
 loaderBack.BorderSizePixel = 0
 loaderBack.Parent = loaderGui
 
@@ -95,6 +96,10 @@ task.spawn(function()
     end)
 end)
 
+task.delay(10, function()
+    if loaderGui then pcall(function() PulsarLoaderComplete() end) end
+end)
+
 task.spawn(function()
     local progress = 0
     while loaderGui and loaderGui.Parent do
@@ -125,7 +130,7 @@ function PulsarLoaderComplete()
     task.wait(0.4)
     if not loaderGui or typeof(loaderGui) ~= "Instance" then return end
     pcall(function()
-        local out = TweenInfo.new(0.3, Enum.EasingStyle.Qual, Enum.EasingDirection.In)
+        local out = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
         TweenService:Create(loaderBack, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderFrame, out, { Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderBar, out, { BackgroundTransparency = 1 }):Play()
@@ -142,7 +147,7 @@ end
 local LockGui = Instance.new("ScreenGui")
 LockGui.Name = "PulsarLock"
 LockGui.ResetOnSpawn = false
-LockGui.DisplayOrder = 9998
+LockGui.DisplayOrder = 100
 LockGui.IgnoreGuiInset = true
 LockGui.Enabled = false
 
@@ -251,12 +256,15 @@ pcall(function()
     end
 end)
 
+pcall(function() Library.ForceCheckbox = true end)
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = Library:CreateWindow({
     Title = "PULSAR 2.3",
     Footer = "Powered by Obsidian",
+    ToggleKeybind = Enum.KeyCode.RightShift,
     Size = UDim2.fromOffset(540, 420),
     Center = true,
     AutoShow = true,
@@ -268,6 +276,7 @@ local Window = Library:CreateWindow({
     SidebarCompactWidth = 56,
 })
 pcall(function() Window:SetCornerRadius(8) end)
+pcall(function() Library.CantDragForced = false end)
 pcall(function() PulsarLoaderComplete() end)
 pcall(function() LockGui.Enabled = true end)
 
@@ -735,174 +744,195 @@ local function RemoveShader()
     ShaderState.Active = false
 end
 
--- =====================================================================
--- ГРОЗА (ливень + молнии со звуком) — для пресета Thunderstorm
--- =====================================================================
+-- ============ СЕКЦИЯ ГРОЗА ============
 local STORM_THUNDER_IDS = { 98719867425764, 133426162, 4961240438 }
 local SoundService = game:GetService("SoundService")
-local Storm = { Zone = nil, Sound = nil, MoveConn = nil, FlashConn = nil }
+
+local Storm = { Zone = nil, Sound = nil, MoveConn = nil, FlashConn = nil, FlashTask = nil }
 
 StormStop = function()
+    if Storm.Zone then
+        pcall(function() Storm.Zone:Destroy() end)
+        Storm.Zone = nil
+    end
+    if Storm.Sound then
+        pcall(function() Storm.Sound:Stop() end)
+        pcall(function() Storm.Sound:Destroy() end)
+        Storm.Sound = nil
+    end
+    if Storm.MoveConn then
+        pcall(function() Storm.MoveConn:Disconnect() end)
+        Storm.MoveConn = nil
+    end
     if Storm.FlashConn then
-        pcall(function() task.cancel(Storm.FlashConn) end)
+        pcall(function() Storm.FlashConn:Disconnect() end)
         Storm.FlashConn = nil
     end
-    if Storm.MoveConn then Storm.MoveConn:Disconnect() Storm.MoveConn = nil end
-    if Storm.Zone then Storm.Zone:Destroy() Storm.Zone = nil end
-    Storm.Sound = nil
+    if Storm.FlashTask then
+        pcall(function() task.cancel(Storm.FlashTask) end)
+        Storm.FlashTask = nil
+    end
 end
 
 StormStart = function(level)
     StormStop()
-    level = math.clamp(tonumber(level) or 8, 0, 10)
+    level = level or 8
+
+    -- зона дождя над камерой
     local cam = workspace.CurrentCamera
-    if not cam then return end
+    if cam then
+        local zone = Instance.new("Part")
+        zone.Name = "PulsarRainZone"
+        zone.Size = Vector3.new(60, 1, 60)
+        zone.Anchored = true
+        zone.CanCollide = false
+        zone.Transparency = 1
+        zone.Position = cam.CFrame.Position + cam.CFrame.LookVector * 20 + Vector3.new(0, 40, 0)
+        zone.Parent = workspace
+        Storm.Zone = zone
 
-    local zone = Instance.new("Part")
-    zone.Name = "PulsarRainZone"
-    zone.Anchored = true
-    zone.CanCollide = false
-    zone.CanQuery = false
-    zone.Transparency = 1
-    zone.Size = Vector3.new(60, 1, 60)
-    zone.Parent = cam
+        local rain = Instance.new("ParticleEmitter")
+        rain.Name = "PulsarRain"
+        rain.Texture = "rbxasset://textures/particles/smoke_main.dds"
+        rain.Rate = 40 * level
+        rain.Lifetime = NumberRange.new(0.8, 1.2)
+        rain.Speed = NumberRange.new(90, 110)
+        rain.SpreadAngle = Vector2.new(4, 4)
+        rain.Size = NumberSequence.new(0.35)
+        rain.Color = ColorSequence.new(Color3.fromRGB(200, 210, 230))
+        rain.Transparency = NumberSequence.new(0.55)
+        rain.Parent = zone
 
-    local rain = Instance.new("ParticleEmitter")
-    rain.Name = "PulsarRain"
-    rain.Texture = "rbxasset://textures/particles/smoke_main.dds"
-    rain.Color = ColorSequence.new(Color3.fromRGB(165, 175, 200))
-    rain.Size = NumberSequence.new(0.22)
-    rain.Transparency = NumberSequence.new(0.4)
-    rain.Lifetime = NumberRange.new(0.9, 1.1)
-    rain.Rate = 40 * level
-    rain.Speed = NumberRange.new(90, 110)
-    rain.EmissionDirection = Enum.NormalId.Bottom
-    rain.SpreadAngle = Vector2.new(4, 4)
-    rain.Parent = zone
-    Storm.Zone = zone
-
-    for _, id in ipairs(STORM_THUNDER_IDS) do
-        local s = Instance.new("Sound")
-        s.Name = "PulsarThunder"
-        s.SoundId = "rbxassetid://" .. id
-        s.Volume = 1
-        s.Parent = SoundService
-        local t0 = os.clock()
-        while not s.IsLoaded and os.clock() - t0 < 2.5 do
-            task.wait(0.1)
-        end
-        if s.IsLoaded and s.TimeLength > 0 then
-            Storm.Sound = s
-            break
-        end
-        s:Destroy()
+        Storm.MoveConn = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                local c = workspace.CurrentCamera
+                if c and Storm.Zone then
+                    Storm.Zone.Position = c.CFrame.Position + c.CFrame.LookVector * 20 + Vector3.new(0, 40, 0)
+                end
+            end)
+        end)
     end
 
-    Storm.MoveConn = RunService.Heartbeat:Connect(function()
-        local c = workspace.CurrentCamera
-        if Storm.Zone and c then
-            Storm.Zone.CFrame = CFrame.new(c.CFrame.Position + c.CFrame.LookVector * 20 + Vector3.new(0, 45, 0))
+    -- подбор звука грома: перебор кандидатов с ожиданием загрузки (PreloadAsync в Delta не надёжен)
+    task.spawn(function()
+        local chosen = nil
+        for _, id in ipairs(STORM_THUNDER_IDS) do
+            local s = nil
+            pcall(function()
+                s = Instance.new("Sound")
+                s.SoundId = "rbxassetid://" .. tostring(id)
+                s.Volume = 1
+                s.Parent = SoundService
+            end)
+            if s then
+                local waited = 0
+                while not s.IsLoaded and waited < 2.5 do
+                    task.wait(0.1)
+                    waited = waited + 0.1
+                end
+                local len = nil
+                pcall(function() len = s.TimeLength end)
+                if s.IsLoaded and (len or 0) > 0 then
+                    chosen = s
+                    break
+                end
+                pcall(function() s:Destroy() end)
+            end
         end
+        if chosen then
+            if ShaderState.Active and ShaderState.CurrentName == "Thunderstorm" then
+                Storm.Sound = chosen
+                pcall(function() chosen:Play() end)
+            else
+                pcall(function() chosen:Destroy() end)
+            end
+        end
+        -- если ни один кандидат не загрузился — гроза работает без звука
     end)
 
-    Storm.FlashConn = task.spawn(function()
-        while Storm.Zone and Storm.Zone.Parent do
-            task.wait(math.random(3, 8))
-            if not (Storm.Zone and Storm.Zone.Parent) then break end
-            local base = Lighting.Brightness
-            local baseExp = Lighting.ExposureCompensation
-            pcall(function()
-                Lighting.Brightness = base + 3
-                Lighting.ExposureCompensation = baseExp + 0.6
-                task.wait(0.1)
-                Lighting.Brightness = base + 1
-                Lighting.ExposureCompensation = baseExp + 0.2
-                task.wait(0.15)
-                Lighting.Brightness = base + 2.5
-                task.wait(0.08)
-                Lighting.Brightness = base
-                Lighting.ExposureCompensation = baseExp
+    -- вспышки молний: 3-8 c, тройной удар, гром через 0.3 c
+    Storm.FlashTask = task.spawn(function()
+        while true do
+            task.wait(3 + math.random() * 5)
+            if not (ShaderState.Active and ShaderState.CurrentName == "Thunderstorm") then break end
+            local baseBrightness = Lighting.Brightness or 2
+            local baseExposure = Lighting.ExposureCompensation or 0
+            pcall(function() Lighting.Brightness = baseBrightness + 3 end)
+            task.wait(0.11)
+            pcall(function() Lighting.Brightness = baseBrightness + 1 end)
+            pcall(function() Lighting.ExposureCompensation = baseExposure + 0.2 end)
+            task.wait(0.11)
+            pcall(function() Lighting.Brightness = baseBrightness + 2.5 end)
+            pcall(function() Lighting.ExposureCompensation = baseExposure + 0.6 end)
+            task.wait(0.11)
+            pcall(function() Lighting.Brightness = baseBrightness end)
+            pcall(function() Lighting.ExposureCompensation = baseExposure end)
+            -- гром с задержкой 0.3 c
+            task.delay(0.3, function()
+                if Storm.Sound then pcall(function() Storm.Sound:Play() end) end
             end)
-            if Storm.Sound then
-                task.delay(0.3, function()
-                    pcall(function() Storm.Sound:Play() end)
-                end)
-            end
         end
     end)
 end
 
+-- ============ ОЧИСТКА ============
 local PulsarSoundMuteOff
 
 local function VisualsCleanup()
-    StormStop()
-    if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
-    RemoveShader()
-    Updaters = {}
-    if VisualHeartbeat then
-        VisualHeartbeat:Disconnect()
-        VisualHeartbeat = nil
-    end
+    pcall(function() StormStop() end)
+    pcall(function() PulsarSoundMuteOff() end)
+    pcall(function() RemoveShader() end)
+    pcall(function() Updaters = {} end)
     pcall(function()
-        LockGui:Destroy()
-        loaderGui:Destroy()
+        if VisualHeartbeat then VisualHeartbeat:Disconnect() end
     end)
+    pcall(function() if LockGui then LockGui:Destroy() end end)
+    pcall(function() if loaderGui then loaderGui:Destroy() end end)
 end
 
-pcall(function()
-    Library:OnUnload(VisualsCleanup)
-end)
+Library:OnUnload(VisualsCleanup)
 
--- =====================================================================
--- ВКЛАДКА VISUAL (управление через Obsidian)
--- =====================================================================
-local VisualTab = TabObjects["Visual"]
-local currentShader = "Scarlet Atmosphere"
-local currentLevel = 8
-
-local ShaderGroup = VisualTab:AddLeftGroupbox("Shaders")
+-- ============ ВКЛАДКА VISUAL ============
+local ShaderGroup = TabObjects["Visual"]:AddLeftGroupbox("Shaders")
 
 ShaderGroup:AddDropdown("SavitarShader", {
     Values = ShaderOrder,
-    Default = 1,
+    Default = "Scarlet Atmosphere",
     Multi = false,
-    Text = "Шейдер",
-    Callback = function(v)
-        currentShader = v
-        if ShaderState.Active then ApplyShader(currentShader, currentLevel) end
-    end,
+    Text = "Пресет",
+    Tooltip = "Выбор визуального пресета",
 })
-
 ShaderGroup:AddSlider("SavitarIntensity", {
     Text = "Интенсивность",
     Default = 8,
     Min = 0,
     Max = 10,
     Rounding = 0,
-    Callback = function(v)
-        currentLevel = v
-        if ShaderState.Active then ApplyShader(currentShader, currentLevel) end
-    end,
+    Compact = false,
 })
-
 ShaderGroup:AddToggle("SavitarShaderOn", {
     Text = "Включить шейдер",
     Default = false,
-    Callback = function(on)
-        if on then
-            ApplyShader(currentShader, currentLevel)
+    Callback = function(v)
+        if v then
+            task.spawn(function()
+                local name = Library.Options.SavitarShader and Library.Options.SavitarShader.Value or "Scarlet Atmosphere"
+                local lvl = Library.Options.SavitarIntensity and Library.Options.SavitarIntensity.Value or 8
+                local ok = ApplyShader(name, lvl)
+                if ok then
+                    pcall(function() Library:Notify("Шейдер: " .. name) end)
+                else
+                    pcall(function() Library:Notify("Не удалось применить шейдер") end)
+                end
+            end)
         else
             RemoveShader()
         end
     end,
 })
 
-
--- =====================================================================
--- ЗВУКИ (блок в вкладке Visual, под шейдерами) — категории Mute
--- =====================================================================
-local SoundMuteCatGroup = VisualTab:AddLeftGroupbox("Звуки")
-local MuteSoundConn = nil
+-- ============ ВКЛАДКА VISUAL: БЛОК ЗВУКИ ============
+local SoundMuteCatGroup = TabObjects["Visual"]:AddLeftGroupbox("Звуки")
 
 local SoundCategories = {
     { Name = "Ambience",     Text = "Mute Ambience",              Patterns = { "ambien", "wind", "birds" } },
@@ -916,441 +946,448 @@ local SoundCategories = {
 }
 
 local function MatchesPatterns(sound, patterns)
-    local node = sound
-    local names = {}
-    while node and node ~= game do
-        names[#names + 1] = string.lower(node.Name)
-        node = node.Parent
-    end
-    for _, pattern in ipairs(patterns) do
-        for _, name in ipairs(names) do
-            if string.find(name, pattern, 1, true) then return true end
+    local ok, res = pcall(function()
+        local name = string.lower(tostring(sound.Name))
+        for _, p in ipairs(patterns) do
+            if string.find(name, string.lower(p), 1, true) then
+                return true
+            end
         end
-    end
-    return false
+        -- обход ВСЕЙ цепочки родителей до game (звуки в FTAP лежат глубоко)
+        local node = sound.Parent
+        while node and node ~= game do
+            local pname = string.lower(tostring(node.Name))
+            for _, p in ipairs(patterns) do
+                if string.find(pname, string.lower(p), 1, true) then
+                    return true
+                end
+            end
+            node = node.Parent
+        end
+        return false
+    end)
+    return ok and res or false
 end
 
 local function UninstallGroup(group)
-    if not group then return end
     pcall(function()
-        for _, obj in ipairs(game:GetDescendants()) do
-            if obj:IsA("Sound") and obj.SoundGroup == group then
-                obj.SoundGroup = nil
+        for _, s in ipairs(game:GetDescendants()) do
+            if s:IsA("Sound") and s.SoundGroup == group then
+                s.SoundGroup = nil
             end
         end
     end)
     pcall(function() group:Destroy() end)
 end
 
+local MuteWatcher = nil
+
 local function UpdateMuteWatcher()
     local anyActive = false
     for _, cat in ipairs(SoundCategories) do
-        if cat.Group then anyActive = true break end
+        local opt = Library.Options["PulsarMute_" .. cat.Name]
+        if opt and opt.Value then
+            anyActive = true
+            break
+        end
     end
-    if anyActive and not MuteSoundConn then
-        MuteSoundConn = game.DescendantAdded:Connect(function(obj)
-            if not obj:IsA("Sound") then return end
-            task.defer(function()
-                for _, cat2 in ipairs(SoundCategories) do
-                    pcall(function()
-                        if cat2.Group and obj.SoundGroup == nil and MatchesPatterns(obj, cat2.Patterns) then
-                            obj.SoundGroup = cat2.Group
+    if anyActive and not MuteWatcher then
+        MuteWatcher = game.DescendantAdded:Connect(function(d)
+            pcall(function()
+                if d:IsA("Sound") then
+                    task.defer(function()
+                        for _, cat in ipairs(SoundCategories) do
+                            local opt = Library.Options["PulsarMute_" .. cat.Name]
+                            if opt and opt.Value and MatchesPatterns(d, cat.Patterns) then
+                                pcall(function() d.SoundGroup = SoundService:FindFirstChild("PulsarMute_" .. cat.Name) end)
+                            end
                         end
                     end)
                 end
             end)
         end)
-    elseif not anyActive and MuteSoundConn then
-        MuteSoundConn:Disconnect()
-        MuteSoundConn = nil
+    elseif not anyActive and MuteWatcher then
+        pcall(function() MuteWatcher:Disconnect() end)
+        MuteWatcher = nil
     end
 end
 
 PulsarSoundMuteOff = function()
     for _, cat in ipairs(SoundCategories) do
-        UninstallGroup(cat.Group)
-        cat.Group = nil
+        local g = SoundService:FindFirstChild("PulsarMute_" .. cat.Name)
+        if g then UninstallGroup(g) end
+        local opt = Library.Options["PulsarMute_" .. cat.Name]
+        if opt then pcall(function() opt:SetValue(false) end) end
     end
-    if MuteSoundConn then
-        MuteSoundConn:Disconnect()
-        MuteSoundConn = nil
+    if MuteWatcher then
+        pcall(function() MuteWatcher:Disconnect() end)
+        MuteWatcher = nil
     end
 end
 
 for _, cat in ipairs(SoundCategories) do
-    cat.Group = nil
     SoundMuteCatGroup:AddToggle("PulsarMute_" .. cat.Name, {
         Text = cat.Text,
         Default = false,
-        Callback = function(on)
-            if on then
-                if not cat.Group then
-                    cat.Group = Instance.new("SoundGroup")
-                    cat.Group.Name = "PulsarMute_" .. cat.Name
-                    cat.Group.Volume = 0
-                    cat.Group.Parent = SoundService
+        Callback = function(v)
+            local gname = "PulsarMute_" .. cat.Name
+            if v then
+                local g = SoundService:FindFirstChild(gname)
+                if not g then
+                    g = Instance.new("SoundGroup")
+                    g.Name = gname
+                    g.Volume = 0
+                    g.Parent = SoundService
                 end
-                local group = cat.Group
-                pcall(function()
-                    for _, obj in ipairs(game:GetDescendants()) do
-                        if obj:IsA("Sound") and obj.SoundGroup == nil and MatchesPatterns(obj, cat.Patterns) then
-                            obj.SoundGroup = group
-                        end
+                task.spawn(function()
+                    for _, s in ipairs(game:GetDescendants()) do
+                        pcall(function()
+                            if s:IsA("Sound") and not s.SoundGroup and MatchesPatterns(s, cat.Patterns) then
+                                s.SoundGroup = g
+                            end
+                        end)
                     end
                 end)
                 UpdateMuteWatcher()
             else
-                UninstallGroup(cat.Group)
-                cat.Group = nil
+                local g = SoundService:FindFirstChild(gname)
+                if g then UninstallGroup(g) end
                 UpdateMuteWatcher()
             end
         end,
     })
 end
 
+-- ============ ВКЛАДКА PLAYER ============
+local PlayerMoveGroup = TabObjects["Player"]:AddLeftGroupbox("Movement")
 
--- =====================================================================
--- ВКЛАДКА PLAYER (функции Resonance, точь-в-точь из модулей)
--- =====================================================================
-local PlayerTab = TabObjects["Player"]
-local PlayerLeft = PlayerTab:AddLeftGroupbox("Движение")
-local PlayerRight = PlayerTab:AddRightGroupbox("Телепорт")
-
-local PlayerState = { FlySpeed = 50, WalkSpeed = 100, JumpPower = 200, Gravity = 196.2 }
-
-local function Res_getChar()
-    local c = LocalPlayer and LocalPlayer.Character
-    if not c or not c.Parent then return nil end
-    return c
-end
-
-local function Res_getHum()
-    local char = Res_getChar()
-    local h = char and char:FindFirstChildOfClass("Humanoid")
-    if h and h.Health > 0 then return h end
-    return nil
-end
-
-local function Res_getHRP()
-    local char = Res_getChar()
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if root and root.Parent then return root end
-    return nil
-end
-
-local function Res_teleportTo(cf)
-    local root = Res_getHRP()
-    if root then pcall(function() root.CFrame = cf end) end
-end
-
--- Func #101: Infinite Jump | toggle
-local ResInfJumpConn = nil
-PlayerLeft:AddToggle("ResInfiniteJump", {
+-- #101 Infinite Jump
+PlayerMoveGroup:AddToggle("InfiniteJump", {
     Text = "Infinite Jump",
     Default = false,
-    Callback = function(enabled)
-        if enabled then
-            PlayerState.InfiniteJump = true
-            ResInfJumpConn = game:GetService("UserInputService").JumpRequest:Connect(function()
-                if not PlayerState.InfiniteJump then return end
-                local hum = Res_getHum()
-                if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-            end)
-        else
-            PlayerState.InfiniteJump = false
-            if ResInfJumpConn then
-                ResInfJumpConn:Disconnect()
-                ResInfJumpConn = nil
+    Callback = function(v)
+        task.spawn(function()
+            if v then
+                _G.PulsarInfJumpConn = UserInputService.JumpRequest:Connect(function()
+                    local char = LocalPlayer.Character
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
+                    if hum then pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end) end
+                end)
+            else
+                pcall(function()
+                    if _G.PulsarInfJumpConn then _G.PulsarInfJumpConn:Disconnect() end
+                end)
+                _G.PulsarInfJumpConn = nil
             end
-        end
+        end)
     end,
 })
 
--- Func #102: Noclip | toggle
-local ResNoclipConn = nil
-PlayerLeft:AddToggle("ResNoclip", {
+-- #102 Noclip
+PlayerMoveGroup:AddToggle("PulsarNoclip", {
     Text = "Noclip",
     Default = false,
-    Callback = function(enabled)
-        if enabled then
-            PlayerState.NoclipMove = true
-            ResNoclipConn = game:GetService("RunService").Stepped:Connect(function()
-                if not PlayerState.NoclipMove then return end
-                local char = Res_getChar()
-                if not char then return end
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
+    Callback = function(v)
+        task.spawn(function()
+            if v then
+                _G.PulsarNoclipConn = RunService.Stepped:Connect(function()
+                    local char = LocalPlayer.Character
+                    if not char then return end
+                    for _, part in ipairs(char:GetDescendants()) do
+                        pcall(function()
+                            if part:IsA("BasePart") and part.CanCollide then
+                                part.CanCollide = false
+                            end
+                        end)
                     end
-                end
-            end)
-        else
-            PlayerState.NoclipMove = false
-            if ResNoclipConn then
-                ResNoclipConn:Disconnect()
-                ResNoclipConn = nil
+                end)
+            else
+                pcall(function()
+                    if _G.PulsarNoclipConn then _G.PulsarNoclipConn:Disconnect() end
+                end)
+                _G.PulsarNoclipConn = nil
             end
-            local char = Res_getChar()
-            if char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                        pcall(function() part.CanCollide = true end)
-                    end
-                end
-            end
-        end
+        end)
     end,
 })
 
--- Func #103: Fly | toggle
-local ResFlyBV, ResFlyBG, ResFlyConn = nil, nil, nil
-PlayerLeft:AddSlider("ResFlySpeed", {
+-- #103 Fly
+PlayerMoveGroup:AddSlider("PulsarFlySpeed", {
     Text = "Fly Speed",
     Default = 50,
     Min = 10,
-    Max = 300,
+    Max = 200,
     Rounding = 0,
-    Callback = function(v) PlayerState.FlySpeed = v end,
+    Compact = false,
 })
-PlayerLeft:AddToggle("ResFly", {
-    Text = "Fly (WASD + Space/CTRL)",
+PlayerMoveGroup:AddSlider("PulsarFlyForce", {
+    Text = "Fly Force",
+    Default = 5000,
+    Min = 1000,
+    Max = 20000,
+    Rounding = 0,
+    Compact = false,
+})
+PlayerMoveGroup:AddToggle("PulsarFly", {
+    Text = "Fly",
     Default = false,
-    Callback = function(enabled)
-        if enabled then
-            local hrp = Res_getHRP()
-            if not hrp then return end
-            ResFlyBV = Instance.new("BodyVelocity")
-            ResFlyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-            ResFlyBV.Velocity = Vector3.new(0, 0, 0)
-            ResFlyBV.Parent = hrp
-
-            ResFlyBG = Instance.new("BodyGyro")
-            ResFlyBG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-            ResFlyBG.P = 1000
-            ResFlyBG.D = 50
-            ResFlyBG.Parent = hrp
-
-            local ResCamera = workspace.CurrentCamera
-            local ResUIS = game:GetService("UserInputService")
-            PlayerState.Fly = true
-            ResFlyConn = game:GetService("RunService").RenderStepped:Connect(function()
-                if not PlayerState.Fly then return end
-                local char = Res_getChar()
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                if not root or not ResFlyBV then return end
-                local moveDir = Vector3.new()
-                if ResUIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + ResCamera.CFrame.LookVector end
-                if ResUIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - ResCamera.CFrame.LookVector end
-                if ResUIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - ResCamera.CFrame.RightVector end
-                if ResUIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + ResCamera.CFrame.RightVector end
-                if ResUIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-                if ResUIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-                ResFlyBV.Velocity = moveDir * (PlayerState.FlySpeed or 50)
-                ResFlyBG.CFrame = ResCamera.CFrame
-            end)
-        else
-            PlayerState.Fly = false
-            if ResFlyBV then ResFlyBV:Destroy(); ResFlyBV = nil end
-            if ResFlyBG then ResFlyBG:Destroy(); ResFlyBG = nil end
-            if ResFlyConn then
-                ResFlyConn:Disconnect()
-                ResFlyConn = nil
-            end
-        end
-    end,
-})
-
--- Func #104: Speed Boost | toggle
-PlayerLeft:AddSlider("ResWalkSpeed", {
-    Text = "Walk Speed",
-    Default = 100,
-    Min = 16,
-    Max = 500,
-    Rounding = 0,
     Callback = function(v)
-        PlayerState.WalkSpeed = v
-        if PlayerState.SpeedBoost then
-            local hum = Res_getHum()
-            if hum then hum.WalkSpeed = PlayerState.WalkSpeed or 100 end
-        end
+        task.spawn(function()
+            if v then
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if not (hum and hrp) then
+                    pcall(function() Library:Notify("Персонаж не найден") end)
+                    return
+                end
+                local bv = Instance.new("BodyVelocity")
+                bv.Name = "PulsarFlyBV"
+                bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                bv.Velocity = Vector3.zero
+                bv.Parent = hrp
+                local bg = Instance.new("BodyGyro")
+                bg.Name = "PulsarFlyBG"
+                bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+                bg.P = 9e4
+                bg.CFrame = hrp.CFrame
+                bg.Parent = hrp
+                _G.PulsarFlyConn = RunService.Heartbeat:Connect(function()
+                    pcall(function()
+                        local c = LocalPlayer.Character
+                        local h = c and c:FindFirstChildOfClass("Humanoid")
+                        local root = c and c:FindFirstChild("HumanoidRootPart")
+                        local bodyVel = root and root:FindFirstChild("PulsarFlyBV")
+                        local bodyGyro = root and root:FindFirstChild("PulsarFlyBG")
+                        if not (h and root and bodyVel and bodyGyro) then return end
+                        bodyGyro.CFrame = workspace.CurrentCamera.CFrame
+                        local move = h.MoveDirection
+                        local speed = (Library.Options.PulsarFlySpeed and Library.Options.PulsarFlySpeed.Value) or 50
+                        if move.Magnitude > 0 then
+                            bodyVel.Velocity = move * speed
+                        else
+                            bodyVel.Velocity = Vector3.zero
+                        end
+                    end)
+                end)
+            else
+                pcall(function()
+                    if _G.PulsarFlyConn then _G.PulsarFlyConn:Disconnect() end
+                end)
+                _G.PulsarFlyConn = nil
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    pcall(function() local b = hrp:FindFirstChild("PulsarFlyBV") if b then b:Destroy() end end)
+                    pcall(function() local b = hrp:FindFirstChild("PulsarFlyBG") if b then b:Destroy() end end)
+                end
+            end
+        end)
     end,
 })
-PlayerLeft:AddToggle("ResSpeedBoost", {
+
+-- #104 Speed Boost
+PlayerMoveGroup:AddSlider("PulsarSpeedBoost", {
+    Text = "Speed Boost (WalkSpeed)",
+    Default = 16,
+    Min = 16,
+    Max = 200,
+    Rounding = 0,
+    Compact = false,
+})
+PlayerMoveGroup:AddToggle("PulsarSpeedOn", {
     Text = "Speed Boost",
     Default = false,
-    Callback = function(enabled)
-        PlayerState.SpeedBoost = enabled
-        local hum = Res_getHum()
-        if not hum then
-            local char = Res_getChar()
-            hum = char and char:FindFirstChildOfClass("Humanoid")
-        end
-        if enabled then
-            if hum then hum.WalkSpeed = PlayerState.WalkSpeed or 100 end
-        else
-            if hum then hum.WalkSpeed = 16 end
-        end
+    Callback = function(v)
+        task.spawn(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if v then
+                    local spd = (Library.Options.PulsarSpeedBoost and Library.Options.PulsarSpeedBoost.Value) or 16
+                    pcall(function() hum.WalkSpeed = spd end)
+                else
+                    pcall(function() hum.WalkSpeed = 16 end)
+                end
+            end
+        end)
     end,
 })
 
--- Func #105: High Jump | toggle
-PlayerLeft:AddSlider("ResJumpPower", {
-    Text = "Jump Power",
-    Default = 200,
+-- #105 High Jump
+PlayerMoveGroup:AddSlider("PulsarJumpPower", {
+    Text = "High Jump (JumpPower)",
+    Default = 50,
     Min = 50,
-    Max = 500,
+    Max = 300,
     Rounding = 0,
-    Callback = function(v)
-        PlayerState.JumpPower = v
-        if PlayerState.HighJump then
-            local hum = Res_getHum()
-            if hum then hum.JumpPower = PlayerState.JumpPower or 200 end
-        end
-    end,
+    Compact = false,
 })
-PlayerLeft:AddToggle("ResHighJump", {
+PlayerMoveGroup:AddToggle("PulsarJumpOn", {
     Text = "High Jump",
     Default = false,
-    Callback = function(enabled)
-        PlayerState.HighJump = enabled
-        local hum = Res_getHum()
-        if not hum then
-            local char = Res_getChar()
-            hum = char and char:FindFirstChildOfClass("Humanoid")
-        end
-        if enabled then
-            if hum then hum.JumpPower = PlayerState.JumpPower or 200 end
-        else
-            if hum then hum.JumpPower = 50 end
-        end
+    Callback = function(v)
+        task.spawn(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                if v then
+                    local p = (Library.Options.PulsarJumpPower and Library.Options.PulsarJumpPower.Value) or 50
+                    pcall(function()
+                        hum.UseJumpPower = true
+                        hum.JumpPower = p
+                    end)
+                else
+                    pcall(function() hum.JumpPower = 50 end)
+                end
+            end
+        end)
     end,
 })
 
--- Func #106: Low Gravity | toggle
-local ResOrigGravity = nil
-PlayerLeft:AddSlider("ResGravity", {
-    Text = "Gravity",
-    Default = 196,
-    Min = 20,
-    Max = 500,
-    Rounding = 0,
-    Callback = function(v) PlayerState.Gravity = v end,
-})
-PlayerLeft:AddToggle("ResLowGravity", {
+-- #106 Low Gravity / #107 Zero Gravity
+PlayerMoveGroup:AddToggle("PulsarLowGravity", {
     Text = "Low Gravity",
     Default = false,
-    Callback = function(enabled)
-        if enabled then
-            ResOrigGravity = workspace.Gravity
-            workspace.Gravity = (PlayerState.Gravity or 196.2) / 4
-        else
-            workspace.Gravity = ResOrigGravity or 196.2
-        end
+    Callback = function(v)
+        pcall(function() workspace.Gravity = v and 60 or 196.2 end)
     end,
 })
-
--- Func #107: Zero Gravity | toggle
-local ResOrigGravity2 = nil
-PlayerLeft:AddToggle("ResZeroGravity", {
+PlayerMoveGroup:AddToggle("PulsarZeroGravity", {
     Text = "Zero Gravity",
     Default = false,
-    Callback = function(enabled)
-        if enabled then
-            ResOrigGravity2 = workspace.Gravity
-            workspace.Gravity = 0
-        else
-            workspace.Gravity = ResOrigGravity2 or 196.2
-        end
+    Callback = function(v)
+        pcall(function() workspace.Gravity = v and 0 or 196.2 end)
     end,
 })
 
--- Func #108: Auto Jump | toggle
-local ResAutoJumpState = { running = false }
-PlayerLeft:AddToggle("ResAutoJump", {
+-- #108 Auto Jump
+PlayerMoveGroup:AddToggle("PulsarAutoJump", {
     Text = "Auto Jump",
     Default = false,
-    Callback = function(enabled)
-        if enabled then
-            ResAutoJumpState.running = true
-            task.spawn(function()
-                while ResAutoJumpState.running do
-                    task.wait(0.1)
-                    local hum = Res_getHum()
-                    if hum and hum.FloorMaterial ~= Enum.Material.Air then
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
+    Callback = function(v)
+        task.spawn(function()
+            if v then
+                _G.PulsarAutoJumpConn = RunService.Heartbeat:Connect(function()
+                    pcall(function()
+                        local char = LocalPlayer.Character
+                        local hum = char and char:FindFirstChildOfClass("Humanoid")
+                        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.FloorMaterial ~= Enum.Material.Air then
+                            local rayParams = RaycastParams.new()
+                            rayParams.FilterDescendantsInstances = { char }
+                            rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                            local result = workspace:Raycast(hrp.Position, hrp.CFrame.LookVector * 3, rayParams)
+                            if result then
+                                hum.Jump = true
+                            end
+                        end
+                    end)
+                end)
+            else
+                pcall(function()
+                    if _G.PulsarAutoJumpConn then _G.PulsarAutoJumpConn:Disconnect() end
+                end)
+                _G.PulsarAutoJumpConn = nil
+            end
+        end)
+    end,
+})
+
+-- #114-119 Телепорты
+local PlayerTpGroup = TabObjects["Player"]:AddRightGroupbox("Teleports")
+
+local function TeleportTo(cframe)
+    task.spawn(function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function() hrp.CFrame = cframe end)
+        end
+    end)
+end
+
+PlayerTpGroup:AddButton({
+    Text = "TP Spawn",
+    Func = function()
+        local spawnLoc = workspace:FindFirstChildOfClass("SpawnLocation")
+        if spawnLoc then
+            TeleportTo(spawnLoc.CFrame + Vector3.new(0, 5, 0))
+        end
+    end,
+})
+PlayerTpGroup:AddButton({
+    Text = "TP Random Player",
+    Func = function()
+        local others = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then table.insert(others, p) end
+        end
+        local target = others[math.random(#others)]
+        local char = target and target.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            TeleportTo(hrp.CFrame + Vector3.new(0, 3, 0))
+        end
+    end,
+})
+PlayerTpGroup:AddButton({
+    Text = "TP Forward 20",
+    Func = function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            TeleportTo(hrp.CFrame + hrp.CFrame.LookVector * 20)
+        end
+    end,
+})
+PlayerTpGroup:AddButton({
+    Text = "TP Up 20",
+    Func = function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            TeleportTo(hrp.CFrame + Vector3.new(0, 20, 0))
+        end
+    end,
+})
+PlayerTpGroup:AddButton({
+    Text = "TP Down 20",
+    Func = function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            TeleportTo(hrp.CFrame - Vector3.new(0, 20, 0))
+        end
+    end,
+})
+PlayerTpGroup:AddButton({
+    Text = "TP Cursor",
+    Func = function()
+        local cam = workspace.CurrentCamera
+        local mouse = LocalPlayer:GetMouse()
+        if cam and mouse and mouse.Hit then
+            TeleportTo(CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0)))
+        end
+    end,
+})
+
+-- ============ ВКЛАДКА SETTINGS ============
+local SettingsGroup = TabObjects["Settings"]:AddLeftGroupbox("Настройки меню")
+
+SettingsGroup:AddToggle("HideTabText", {
+    Text = "Скрыть текст вкладок",
+    Default = false,
+    Callback = function(v)
+        task.spawn(function()
+            local ok = pcall(function()
+                if Window.SetSidebarCompacted then
+                    Window:SetSidebarCompacted(v)
                 end
             end)
-        else
-            ResAutoJumpState.running = false
-        end
-    end,
-})
-
--- Func #114: Teleport to Spawn | button
-PlayerRight:AddButton({
-    Text = "Teleport to Spawn",
-    Func = function()
-        local sp = workspace:FindFirstChildOfClass("SpawnLocation")
-        if not sp then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("SpawnLocation") then sp = obj; break end
+            if not ok or not Window.SetSidebarCompacted then
+                pcall(function() Window.SidebarCompacted = v end)
             end
-        end
-        if sp then Res_teleportTo(sp.CFrame + Vector3.new(0, 5, 0)) end
-    end,
-})
-
--- Func #115: Teleport to Random Player | button
-PlayerRight:AddButton({
-    Text = "Teleport to Random Player",
-    Func = function()
-        local list = Players:GetPlayers()
-        for i = #list, 1, -1 do
-            if list[i] == LocalPlayer then table.remove(list, i) end
-        end
-        local target = list[math.random(1, #list)]
-        if target and target.Character then
-            local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then Res_teleportTo(hrp.CFrame + Vector3.new(0, 3, 0)) end
-        end
-    end,
-})
-
--- Func #116: Teleport Forward | button
-PlayerRight:AddButton({
-    Text = "Teleport Forward",
-    Func = function()
-        local hrp = Res_getHRP()
-        if hrp then Res_teleportTo(hrp.CFrame + hrp.CFrame.LookVector * 20 + Vector3.new(0, 3, 0)) end
-    end,
-})
-
--- Func #117: Teleport Up | button
-PlayerRight:AddButton({
-    Text = "Teleport Up",
-    Func = function()
-        local hrp = Res_getHRP()
-        if hrp then Res_teleportTo(hrp.CFrame + Vector3.new(0, 50, 0)) end
-    end,
-})
-
--- Func #118: Teleport Down | button
-PlayerRight:AddButton({
-    Text = "Teleport Down",
-    Func = function()
-        local hrp = Res_getHRP()
-        if hrp then Res_teleportTo(hrp.CFrame - Vector3.new(0, 50, 0)) end
-    end,
-})
-
--- Func #119: Teleport to Cursor | button
-PlayerRight:AddButton({
-    Text = "Teleport to Cursor",
-    Func = function()
-        local mouse = LocalPlayer:GetMouse()
-        if mouse and mouse.Hit then
-            Res_teleportTo(mouse.Hit + Vector3.new(0, 3, 0))
-        end
+        end)
     end,
 })
