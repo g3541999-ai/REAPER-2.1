@@ -1052,7 +1052,7 @@ end
 
 
 -- =====================================================================
--- ЧИСТИЛЬЩИК ДОЖДЯ — ДВИЖОК (управление — в колонке Graphics)
+-- ЧИСТИЛЬЩИК ДОЖДЯ — ДВИЖОК (управление — в колонке Thunderstorm)
 -- =====================================================================
 
 local RainPatterns = { "rain", "raindrop", "rainzone" }
@@ -1569,9 +1569,9 @@ do
         Callback = GfxSetBoostFPSOptions,
     })
 
-    GfxDivider("Thunderstorm")
+    local ThunderGroup = VisualTab:AddLeftGroupbox("Thunderstorm")
 
-    Graphics:AddToggle("PulsarNoRain", {
+    ThunderGroup:AddToggle("PulsarNoRain", {
         Text = "Без дождя",
         Default = false,
         Callback = function(on)
@@ -1599,7 +1599,7 @@ do
         end,
     })
 
-    Graphics:AddSlider("PulsarRainDensity", {
+    ThunderGroup:AddSlider("PulsarRainDensity", {
         Text = "Плотность дождя",
         Default = RainSettings.Density,
         Min = 0,
@@ -1611,7 +1611,7 @@ do
         end,
     })
 
-    Graphics:AddSlider("PulsarRainSpeed", {
+    ThunderGroup:AddSlider("PulsarRainSpeed", {
         Text = "Скорость частиц",
         Default = RainSettings.Speed,
         Min = 0,
@@ -1623,7 +1623,7 @@ do
         end,
     })
 
-    Graphics:AddToggle("PulsarRainCountOn", {
+    ThunderGroup:AddToggle("PulsarRainCountOn", {
         Text = "Точное количество",
         Default = RainSettings.CountOn,
         Callback = function(on)
@@ -1632,7 +1632,7 @@ do
         end,
     })
 
-    Graphics:AddSlider("PulsarRainCount", {
+    ThunderGroup:AddSlider("PulsarRainCount", {
         Text = "Количество частиц/с",
         Default = RainSettings.Count,
         Min = 0,
