@@ -1,5 +1,6 @@
 -- ==========================================
 -- PULSAR 2.3 — OBSIDIAN EDITION + SAVITAR SHADERS
+-- Запасная копия
 -- ==========================================
 
 -- =====================================================================
@@ -835,11 +836,13 @@ StormStart = function(level)
 end
 
 local PulsarSoundMuteOff
+local GfxUnload
 
 local function VisualsCleanup()
     StormStop()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
+    if GfxUnload then pcall(GfxUnload) end
     Updaters = {}
     if VisualHeartbeat then
         VisualHeartbeat:Disconnect()
@@ -1010,6 +1013,1143 @@ for _, cat in ipairs(SoundCategories) do
     })
 end
 
+
+-- =====================================================================
+-- VISUAL — GRAPHICS (скопировано с Resonance 2.9 — окно Graphics вкладки Visual)
+-- =====================================================================
+do
+    local GfxTerrain = workspace:FindFirstChildOfClass("Terrain")
+    local GfxHttpService = game:GetService("HttpService")
+
+    local GfxState = {
+        RuntimeConnections = {},
+        CustomAssets = { Requests = {}, Files = {} },
+        WaterPartStates = {},
+        WaterParts = {},
+        WaterRegions = {},
+        WaterSettings = GfxTerrain and {
+            WaterColor = GfxTerrain.WaterColor,
+            WaterWaveSize = GfxTerrain.WaterWaveSize,
+            WaterWaveSpeed = GfxTerrain.WaterWaveSpeed,
+            WaterTransparency = GfxTerrain.WaterTransparency,
+            WaterReflectance = GfxTerrain.WaterReflectance,
+        } or nil,
+        ParticleSettings = {
+            Enabled = false,
+            BoxSize = 500,
+            Texture = "rbxassetid://242109931",
+            Color = Color3.fromRGB(255, 255, 255),
+            Transparency = 0,
+            ParticleSize = 1,
+            Count = 2500,
+            SpeedMin = 0.5,
+            SpeedMax = 2,
+            LifeTime = 10,
+        },
+    }
+
+    local GfxFlags = {
+        NonSwimmableWater = false,
+        Shaders = false,
+    }
+
+    local GfxValues = {
+        WaterYOffset = -4,
+        CustomParticle = nil,
+    }
+
+    local function GfxQueryDescendants(inst, classNames)
+        if not inst then return {} end
+        local ok, result = pcall(function() return inst:QueryDescendants(classNames) end)
+        if ok and type(result) == "table" then
+            return result
+        end
+        local wanted = {}
+        for cls in string.gmatch(classNames or "", "[^,%s]+") do
+            wanted[cls] = true
+        end
+        local list = {}
+        pcall(function()
+            for _, obj in ipairs(inst:GetDescendants()) do
+                if wanted[obj.ClassName] then
+                    list[#list + 1] = obj
+                end
+            end
+        end)
+        return list
+    end
+
+    local function GfxSetConn(name, event, enabled, fn)
+        local existing = GfxState.RuntimeConnections[name]
+
+        if not enabled then
+            if existing then
+                pcall(function() existing:Disconnect() end)
+            end
+            GfxState.RuntimeConnections[name] = nil
+            return
+        end
+
+        if existing and existing.Connected then
+            return
+        end
+        GfxState.RuntimeConnections[name] = event:Connect(fn)
+    end
+
+    local GfxCharCache = {}
+    local function GfxChar(plr)
+        plr = plr or LocalPlayer
+        if not plr then return end
+
+        local cached = GfxCharCache[plr]
+        if cached then
+            local character = cached.Character
+            local rootPart = cached.RootPart
+            local humanoid = cached.Humanoid
+            if character and character.Parent and rootPart and rootPart.Parent and humanoid and humanoid.Parent then
+                return character, rootPart, humanoid
+            end
+            GfxCharCache[plr] = nil
+        end
+
+        local character = plr.Character
+        if character then
+            local realHrp = character:FindFirstChild("realHrp") or character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character:FindFirstChild("Humanoid")
+            GfxCharCache[plr] = { Character = character, RootPart = realHrp, Humanoid = humanoid }
+            return character, realHrp, humanoid
+        end
+    end
+
+    local function GfxClearCustomAsset(name)
+        local file = GfxState.CustomAssets.Files[name]
+        if file and delfile then
+            pcall(delfile, file)
+        end
+        GfxState.CustomAssets.Files[name] = nil
+    end
+
+    local function GfxLoadCustomAsset(url, namePrefix, ext)
+        if type(url) ~= "string" or url == "" then
+            return nil, "Empty URL"
+        end
+
+        if not (writefile and getcustomasset) then
+            return nil, "Custom assets are not supported"
+        end
+
+        local fileName = (namePrefix or "ResonanceAsset") .. "_" .. (tostring(GfxHttpService:GenerateGUID(false)):gsub("%-", "")) .. (ext or "")
+        local ok, result = pcall(game.HttpGet, game, url)
+        if not ok or type(result) ~= "string" or result == "" then
+            return nil, "Download failed"
+        end
+
+        if not pcall(writefile, fileName, result) then
+            if delfile then
+                pcall(delfile, fileName)
+            end
+            return nil, "File write failed"
+        end
+
+        GfxState.CustomAssets.Files[fileName] = fileName
+        local ok2, result2 = pcall(getcustomasset, fileName)
+        if not ok2 or not result2 then
+            GfxClearCustomAsset(fileName)
+            return nil, "Custom asset registration failed"
+        end
+
+        task.delay(2, GfxClearCustomAsset, fileName)
+        return result2, fileName
+    end
+
+    local function GfxResolveAssetInput(input, key, kind, callback, defaultValue, asNumber)
+        local match = tostring(input or ""):match("^%s*(.-)%s*$")
+        local customAssets = GfxState.CustomAssets
+        customAssets.Requests[key] = (customAssets.Requests[key] or 0) + 1
+        local requestToken = customAssets.Requests[key]
+
+        if match == "" then
+            GfxClearCustomAsset(key)
+            callback(defaultValue)
+            return
+        end
+
+        local lower = match:lower()
+        local idMatch = match:match("^%d+$") or lower:match("^rbxassetid://(%d+)$")
+
+        if not idMatch and lower:find("roblox.com", 1, true) then
+            idMatch = lower:match("[?&]id=(%d+)") or lower:match("/asset/(%d+)") or lower:match("/library/(%d+)")
+        end
+
+        if idMatch then
+            GfxClearCustomAsset(key)
+            local num
+            if asNumber then
+                num = tonumber(idMatch)
+            else
+                num = "rbxassetid://" .. idMatch
+            end
+            callback(num, false)
+            return
+        end
+
+        local extLabel = (kind == "sound") and ".mp3" or "image"
+
+        if not lower:match("^https?://") or (kind == "sound" and not lower:match("%.mp3[?#]?.*$")) then
+            pcall(function()
+                Library:Notify(("Enter a Roblox %* ID or a direct %* link."):format(kind, extLabel))
+            end)
+            return
+        end
+
+        local ext = ".mp3"
+        if kind ~= "sound" then
+            local extMatch = (lower:match("^[^?#]+") or lower):match("%.([%w]+)$")
+            if extMatch ~= "png" and extMatch ~= "jpg" and extMatch ~= "jpeg" and extMatch ~= "webp" then
+                extMatch = "png"
+            end
+            ext = "." .. extMatch
+        end
+
+        task.spawn(function()
+            local asset, path = GfxLoadCustomAsset(match, "Resonance" .. key, ext)
+
+            if requestToken ~= customAssets.Requests[key] or Library.Unloaded then
+                asset = asset and path
+                if asset then
+                    GfxClearCustomAsset(path)
+                end
+                return
+            end
+
+            if not asset then
+                local label = key:gsub("(%l)(%u)", "%1 %2")
+                pcall(function()
+                    Library:Notify(("Couldn't load the %*: %*."):format(label:lower(), path))
+                end)
+                return
+            end
+
+            GfxClearCustomAsset(key)
+            customAssets.Files[key] = path
+            callback(asset, true)
+        end)
+    end
+
+    local GfxWaterSession = 0
+    local GfxWaterTimeSlice = 0.004
+    local GfxWaterChunk = 128
+
+    local function GfxSliceClock(now)
+        if os.clock() - now < GfxWaterTimeSlice then
+            return now
+        end
+        RunService.Heartbeat:Wait()
+        return os.clock()
+    end
+
+    local function GfxClearWater(session)
+        local now = os.clock()
+
+        for i = #GfxState.WaterParts, 1, -1 do
+            if session ~= GfxWaterSession then
+                return false
+            end
+            local entry = GfxState.WaterParts[i]
+            local part = entry[1]
+            local transparency = entry[2]
+
+            if part and part.Parent then
+                pcall(function() part.Transparency = transparency end)
+                if GfxState.WaterPartStates[part] then
+                    pcall(function() part.CanCollide = GfxState.WaterPartStates[part][1] end)
+                    GfxState.WaterPartStates[part] = nil
+                end
+            end
+
+            GfxState.WaterParts[i] = nil
+            now = GfxSliceClock(now)
+        end
+
+        for i = #GfxState.WaterRegions, 1, -1 do
+            if session ~= GfxWaterSession then
+                return false
+            end
+            pcall(function()
+                GfxTerrain:FillRegion(GfxState.WaterRegions[i], 4, Enum.Material.Air)
+            end)
+            GfxState.WaterRegions[i] = nil
+            now = GfxSliceClock(now)
+        end
+
+        table.clear(GfxState.WaterRegions)
+        table.clear(GfxState.WaterParts)
+        return true
+    end
+
+    local function GfxFillWater(minVec, maxVec, session, now)
+        local ok, nowOut, completed = pcall(function()
+            local region = Region3.new(minVec, maxVec):ExpandToGrid(4)
+            local minCorner = region.CFrame.Position - region.Size / 2
+            local maxCorner = region.CFrame.Position + region.Size / 2
+            local x = minCorner.X
+
+            while x < maxCorner.X do
+                local xEnd = math.min(x + GfxWaterChunk, maxCorner.X)
+                local y = minCorner.Y
+                local exitY = false
+
+                while not exitY do
+                    if not (y < maxCorner.Y) then
+                        exitY = true
+                    else
+                        local yEnd = math.min(y + GfxWaterChunk, maxCorner.Y)
+                        local z = minCorner.Z
+                        local exitZ = false
+
+                        while not exitZ do
+                            if not (z < maxCorner.Z) then
+                                exitZ = true
+                            else
+                                if session ~= GfxWaterSession then
+                                    break
+                                end
+                                local zEnd = math.min(z + GfxWaterChunk, maxCorner.Z)
+                                local subRegion = Region3.new(Vector3.new(x, y, z), Vector3.new(xEnd, yEnd, zEnd))
+                                GfxState.WaterRegions[#GfxState.WaterRegions + 1] = subRegion
+                                pcall(function()
+                                    GfxTerrain:FillRegion(subRegion, 4, Enum.Material.Water)
+                                end)
+                                now = GfxSliceClock(now)
+                                z = zEnd
+                            end
+                        end
+
+                        if not exitZ then
+                            return now, false
+                        end
+                        y = yEnd
+                    end
+                end
+
+                if not exitY then
+                    return now, false
+                end
+                x = xEnd
+            end
+
+            return now, true
+        end)
+
+        if ok and nowOut ~= nil then
+            return nowOut, completed
+        end
+        return now, false
+    end
+
+    local function GfxSetWater(enabled)
+        GfxWaterSession = GfxWaterSession + 1
+        local session = GfxWaterSession
+
+        task.spawn(function()
+            if not GfxClearWater(session) or not enabled then
+                return
+            end
+
+            local parts = {}
+            pcall(function()
+                local objectModel = workspace.Map.AlwaysHereTweenedObjects.Ocean.Object.ObjectModel
+                local offset = Vector3.new(0, GfxValues.WaterYOffset, 0)
+
+                for _, part in ipairs(GfxQueryDescendants(objectModel, "BasePart")) do
+                    local state = GfxState.WaterPartStates[part]
+
+                    if not state then
+                        if part.Transparency == 1 then
+                            continue
+                        end
+                        state = { part.CanCollide, part.Transparency }
+                        GfxState.WaterPartStates[part] = state
+                    end
+
+                    if state[2] ~= 1 then
+                        parts[#parts + 1] = { part, state[2], part.Position - part.Size / 2 + offset, part.Position + part.Size / 2 + offset }
+                    end
+                end
+            end)
+
+            for _, entry in ipairs(parts) do
+                pcall(function()
+                    local part = entry[1]
+                    if part.Parent then
+                        GfxState.WaterParts[#GfxState.WaterParts + 1] = { part, entry[2] }
+                        part.Transparency = 1
+                    end
+                end)
+            end
+
+            local now = os.clock()
+
+            for _, entry in ipairs(parts) do
+                if session ~= GfxWaterSession then
+                    return
+                end
+                local nowOut, completed = GfxFillWater(entry[3], entry[4], session, now)
+                if not completed then
+                    return
+                end
+                now = nowOut
+            end
+        end)
+    end
+
+    local GfxSwimState = {}
+
+    local function GfxSwim(enabled, humanoid)
+        if GfxSwimState.Humanoid ~= humanoid or not enabled then
+            if GfxSwimState.Connection then
+                pcall(function() GfxSwimState.Connection:Disconnect() end)
+                GfxSwimState.Connection = nil
+            end
+
+            if GfxSwimState.Humanoid and GfxSwimState.Humanoid.Parent and GfxSwimState.Enabled ~= nil then
+                pcall(function()
+                    GfxSwimState.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, GfxSwimState.Enabled)
+                end)
+            end
+
+            table.clear(GfxSwimState)
+        end
+
+        if not enabled or not humanoid then
+            return
+        end
+
+        if not GfxSwimState.Humanoid then
+            GfxSwimState.Humanoid = humanoid
+            pcall(function()
+                GfxSwimState.Enabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Swimming)
+            end)
+
+            GfxSwimState.Connection = humanoid.StateChanged:Connect(function(_, new)
+                local waterToggle = Library.Options.CustomWaterT
+                if new == Enum.HumanoidStateType.Swimming and GfxFlags.NonSwimmableWater and waterToggle and waterToggle.Value then
+                    pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Freefall) end)
+                end
+            end)
+        end
+
+        pcall(function()
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+            if humanoid:GetState() == Enum.HumanoidStateType.Swimming then
+                humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+            end
+        end)
+    end
+
+    local function GfxRestoreWaterSettings()
+        GfxSetWater(false)
+        GfxSwim(false)
+
+        for part, state in pairs(GfxState.WaterPartStates) do
+            pcall(function()
+                if part.Parent then
+                    part.CanCollide = state[1]
+                    part.Transparency = state[2]
+                end
+            end)
+        end
+        table.clear(GfxState.WaterPartStates)
+
+        if GfxState.WaterSettings and GfxTerrain then
+            for key, value in pairs(GfxState.WaterSettings) do
+                pcall(function() GfxTerrain[key] = value end)
+            end
+        end
+    end
+
+    local GfxShader = {
+        Lighting = {
+            Ambient = Lighting.Ambient,
+            Brightness = Lighting.Brightness,
+            ColorShift_Bottom = Lighting.ColorShift_Bottom,
+            ColorShift_Top = Lighting.ColorShift_Top,
+            ExposureCompensation = Lighting.ExposureCompensation,
+            FogColor = Lighting.FogColor,
+            FogEnd = Lighting.FogEnd,
+            FogStart = Lighting.FogStart,
+            OutdoorAmbient = Lighting.OutdoorAmbient,
+            ShadowSoftness = Lighting.ShadowSoftness,
+        },
+        Settings = {
+            Brightness = 2.14,
+            Exposure = 0.24,
+            BloomIntensity = 0.1,
+            Saturation = 0.05,
+            TintColor = Color3.fromRGB(255, 224, 219),
+        },
+        Effects = {},
+    }
+
+    local function GfxRemoveShaderEffects()
+        pcall(function()
+            for _, child in ipairs(Lighting:GetChildren()) do
+                if child:GetAttribute("RSC") then
+                    child:Destroy()
+                end
+            end
+        end)
+        table.clear(GfxShader.Effects)
+    end
+
+    local GfxPart = Instance.new("Part")
+    pcall(function()
+        GfxPart.Name = "partcieslyes"
+        GfxPart.Transparency = 1
+        GfxPart.CanCollide = false
+        GfxPart.CanQuery = false
+        GfxPart.CanTouch = false
+        GfxPart.Anchored = true
+        GfxPart.Parent = workspace
+    end)
+
+    local GfxEmitter = Instance.new("ParticleEmitter")
+    pcall(function()
+        GfxEmitter.Enabled = false
+        GfxEmitter.Shape = Enum.ParticleEmitterShape.Box
+        GfxEmitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+        GfxEmitter.LightEmission = 0
+        GfxEmitter.LightInfluence = 0
+        GfxEmitter.ZOffset = 0
+        GfxEmitter.Parent = GfxPart
+    end)
+
+    local function GfxUpdateParticles(prop)
+        local settings = GfxState.ParticleSettings
+        local all = not prop
+
+        pcall(function()
+            if all or prop == "BoxSize" then
+                GfxPart.Size = Vector3.one * settings.BoxSize
+            end
+            if all or prop == "Texture" then
+                GfxEmitter.Texture = settings.Texture
+            end
+            if all or prop == "Count" then
+                GfxEmitter.Rate = settings.Count
+            end
+            if all or prop == "LifeTime" then
+                GfxEmitter.Lifetime = NumberRange.new(settings.LifeTime)
+            end
+            if all or prop == "SpeedMin" or prop == "SpeedMax" then
+                GfxEmitter.Speed = NumberRange.new(settings.SpeedMin, settings.SpeedMax)
+            end
+            if all or prop == "Color" then
+                GfxEmitter.Color = ColorSequence.new(settings.Color)
+            end
+            if all or prop == "ParticleSize" then
+                GfxEmitter.Size = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0),
+                    NumberSequenceKeypoint.new(0.1, settings.ParticleSize),
+                    NumberSequenceKeypoint.new(0.9, settings.ParticleSize),
+                    NumberSequenceKeypoint.new(1, 0),
+                })
+            end
+            if all or prop == "Transparency" then
+                GfxEmitter.Transparency = NumberSequence.new(settings.Transparency)
+            end
+        end)
+    end
+
+    local function GfxUpdateParticlePosition()
+        local camera = workspace.CurrentCamera
+        if camera then
+            pcall(function() GfxPart.CFrame = camera.CFrame end)
+        end
+    end
+
+    local function GfxSetParticlesEnabled(enabled)
+        GfxState.ParticleSettings.Enabled = enabled
+        pcall(function()
+            local camera = workspace.CurrentCamera
+            GfxSetConn("Particles", camera:GetPropertyChangedSignal("CFrame"), enabled, GfxUpdateParticlePosition)
+        end)
+        pcall(function() GfxEmitter.Enabled = enabled end)
+
+        if enabled then
+            GfxUpdateParticles()
+            GfxUpdateParticlePosition()
+        else
+            pcall(function() GfxEmitter:Clear() end)
+        end
+    end
+
+    local function GfxSetParticleProp(prop, value)
+        GfxState.ParticleSettings[prop] = value
+        if GfxState.ParticleSettings.Enabled then
+            GfxUpdateParticles(prop)
+        end
+    end
+
+    local GfxBoost = {
+        Revert = {},
+        Active = false,
+        Applied = false,
+        Busy = false,
+        Stale = false,
+        Options = { Materials = true, Textures = true, Reflections = true, Shadows = true },
+    }
+
+    local function GfxSetProp(inst, prop, value)
+        local original
+        pcall(function() original = inst[prop] end)
+        if original == value then
+            return
+        end
+
+        local ok = pcall(function()
+            inst[prop] = value
+        end)
+        if not ok then
+            return
+        end
+
+        local slot = GfxBoost.Revert[inst]
+        if not slot then
+            slot = {}
+            GfxBoost.Revert[inst] = slot
+        end
+        if not slot[prop] then
+            slot[prop] = { original, value }
+        end
+    end
+
+    local function GfxBoostApply(inst)
+        if not GfxBoost.Active then
+            return
+        end
+        local opts = GfxBoost.Options
+
+        if inst:IsA("BasePart") and not inst:IsA("Terrain") then
+            if opts.Materials and inst.Material ~= Enum.Material.ForceField then
+                GfxSetProp(inst, "Material", Enum.Material.SmoothPlastic)
+                GfxSetProp(inst, "MaterialVariant", "")
+            end
+            if opts.Reflections then
+                GfxSetProp(inst, "Reflectance", 0)
+            end
+            if opts.Shadows then
+                GfxSetProp(inst, "CastShadow", false)
+            end
+            if opts.Textures and inst:IsA("MeshPart") then
+                GfxSetProp(inst, "TextureID", "")
+            end
+        elseif opts.Textures and (inst:IsA("Decal") or inst:IsA("Texture")) then
+            GfxSetProp(inst, "Transparency", 1)
+        elseif opts.Textures and inst:IsA("SpecialMesh") then
+            GfxSetProp(inst, "TextureId", "")
+        end
+    end
+
+    local function GfxSetBoostFPS(enabled)
+        GfxBoost.Active = enabled and not Library.Unloaded
+
+        local skip
+        if GfxBoost.Busy then
+            skip = GfxBoost.Busy
+        else
+            skip = (GfxBoost.Active == GfxBoost.Applied) and not GfxBoost.Stale
+        end
+        if skip then
+            return
+        end
+        GfxBoost.Busy = true
+
+        task.spawn(function()
+            while true do
+                local now = os.clock()
+
+                if GfxBoost.Active and not GfxBoost.Applied then
+                    GfxBoost.Applied = true
+                    GfxBoost.Stale = false
+
+                    if GfxBoost.Options.Shadows then
+                        GfxSetProp(Lighting, "GlobalShadows", false)
+                    end
+
+                    GfxSetConn("BoostFPSAdded", workspace.DescendantAdded, true, function(desc)
+                        pcall(GfxBoostApply, desc)
+                    end)
+
+                    for _, desc in ipairs(GfxQueryDescendants(workspace, "BasePart, Decal, Texture, SpecialMesh")) do
+                        if GfxBoost.Active then
+                            pcall(GfxBoostApply, desc)
+                            if os.clock() - now > GfxWaterTimeSlice then
+                                task.wait()
+                                now = os.clock()
+                            end
+                        else
+                            break
+                        end
+                    end
+                else
+                    GfxSetConn("BoostFPSAdded", nil, false)
+
+                    for inst, props in pairs(GfxBoost.Revert) do
+                        if inst.Parent then
+                            for prop, entry in pairs(props) do
+                                local ok, current = pcall(function() return inst[prop] end)
+                                if ok and current == entry[2] then
+                                    pcall(function()
+                                        inst[prop] = entry[1]
+                                    end)
+                                end
+                            end
+                        end
+
+                        if not Library.Unloaded and os.clock() - now > GfxWaterTimeSlice then
+                            task.wait()
+                            now = os.clock()
+                        end
+                    end
+
+                    table.clear(GfxBoost.Revert)
+                    GfxBoost.Applied = false
+
+                    if not GfxBoost.Active then
+                        GfxBoost.Stale = false
+                    end
+                end
+
+                if not (GfxBoost.Active == GfxBoost.Applied and not GfxBoost.Stale) then
+                    continue
+                end
+                break
+            end
+
+            GfxBoost.Busy = false
+        end)
+    end
+
+    local function GfxSetBoostFPSOptions(selected)
+        if type(selected) ~= "table" then
+            selected = {}
+        end
+        GfxBoost.Options = selected
+        GfxBoost.Stale = GfxBoost.Active
+        GfxSetBoostFPS(GfxBoost.Active)
+    end
+
+    local Graphics
+    local okGraphics = pcall(function()
+        Graphics = VisualTab:AddRightGroupbox("Graphics", "file-image")
+    end)
+    if not okGraphics or not Graphics then
+        Graphics = VisualTab:AddRightGroupbox("Graphics")
+    end
+
+    local function GfxDivider(name)
+        local ok = false
+        pcall(function()
+            Graphics:AddDivider(name)
+            ok = true
+        end)
+        if not ok then
+            pcall(function() Graphics:AddDivider() end)
+        end
+    end
+
+    local function GfxDepbox(deps)
+        local ok, box = pcall(function()
+            local b = Graphics:AddDependencyBox()
+            b:SetupDependencies(deps)
+            return b
+        end)
+        if ok and box then
+            return box
+        end
+        return nil
+    end
+
+    GfxDivider("Water")
+
+    local WaterToggle = Graphics:AddToggle("CustomWaterT", {
+        Text = "Realistic Water",
+        Default = false,
+        Callback = function(enabled)
+            GfxSetWater(enabled)
+            local _, _, humanoid = GfxChar()
+            GfxSwim(enabled and GfxFlags.NonSwimmableWater, humanoid)
+        end,
+    })
+
+    pcall(function()
+        WaterToggle:AddColorPicker("CustomWaterP", {
+            Text = "Water Color",
+            Default = GfxState.WaterSettings and GfxState.WaterSettings.WaterColor or Color3.fromRGB(103, 170, 218),
+            Callback = function(waterColor)
+                pcall(function() GfxTerrain.WaterColor = waterColor end)
+            end,
+        })
+    end)
+
+    local WaterBox = GfxDepbox({ { Library.Options.CustomWaterT, true } })
+
+    if WaterBox then
+        WaterBox:AddToggle("NonSwimmableWater", {
+            Text = "Non-Swimmable Water",
+            Tooltip = "Makes your character fall through Terrain water instead of swimming",
+            Callback = function(nonSwimmableWater)
+                GfxFlags.NonSwimmableWater = nonSwimmableWater
+                local _, _, humanoid = GfxChar()
+                local waterToggle = Library.Options.CustomWaterT
+                GfxSwim(nonSwimmableWater and waterToggle and waterToggle.Value, humanoid)
+            end,
+        })
+
+        if GfxState.WaterSettings then
+            WaterBox:AddSlider("WaterWaveSize", {
+                Text = "Wave Size",
+                Default = math.round(GfxState.WaterSettings.WaterWaveSize * 100) / 100,
+                Min = 0,
+                Max = 1,
+                Rounding = 2,
+                Compact = true,
+                Callback = function(waterWaveSize)
+                    pcall(function() GfxTerrain.WaterWaveSize = waterWaveSize end)
+                end,
+            })
+
+            WaterBox:AddSlider("WaterWaveSpeed", {
+                Text = "Wave Speed",
+                Default = math.round(GfxState.WaterSettings.WaterWaveSpeed * 10) / 10,
+                Min = 0,
+                Max = 100,
+                Rounding = 1,
+                Compact = true,
+                Callback = function(waterWaveSpeed)
+                    pcall(function() GfxTerrain.WaterWaveSpeed = waterWaveSpeed end)
+                end,
+            })
+
+            WaterBox:AddSlider("WaterTransparency", {
+                Text = "Transparency",
+                Default = math.round(GfxState.WaterSettings.WaterTransparency * 100) / 100,
+                Min = 0,
+                Max = 1,
+                Rounding = 2,
+                Compact = true,
+                Callback = function(waterTransparency)
+                    pcall(function() GfxTerrain.WaterTransparency = waterTransparency end)
+                end,
+            })
+
+            WaterBox:AddSlider("WaterReflectance", {
+                Text = "Reflectance",
+                Default = math.round(GfxState.WaterSettings.WaterReflectance * 100) / 100,
+                Min = 0,
+                Max = 1,
+                Rounding = 2,
+                Compact = true,
+                Callback = function(waterReflectance)
+                    pcall(function() GfxTerrain.WaterReflectance = waterReflectance end)
+                end,
+            })
+        end
+    end
+
+    GfxSetConn("WaterCharAdded", LocalPlayer.CharacterAdded, true, function(character)
+        if Library.Unloaded or not GfxFlags.NonSwimmableWater then
+            return
+        end
+        local waterToggle = Library.Options.CustomWaterT
+        if not (waterToggle and waterToggle.Value) then
+            return
+        end
+        task.spawn(function()
+            local humanoid = character:WaitForChild("Humanoid", 5)
+            if humanoid then
+                GfxSwim(true, humanoid)
+            end
+        end)
+    end)
+
+    GfxDivider("Shaders")
+
+    Graphics:AddToggle("ShadersT", {
+        Text = "Shaders",
+        Default = false,
+        Callback = function(shaders)
+            GfxFlags.Shaders = shaders
+            GfxRemoveShaderEffects()
+
+            if shaders then
+                local shaderSettings = GfxShader.Settings
+
+                pcall(function()
+                    for k in pairs(GfxShader.Lighting) do
+                        GfxShader.Lighting[k] = Lighting[k]
+                    end
+
+                    Lighting.Brightness = shaderSettings.Brightness
+                    Lighting.ColorShift_Bottom = Color3.fromRGB(11, 0, 20)
+                    Lighting.ColorShift_Top = Color3.fromRGB(240, 127, 14)
+                    Lighting.OutdoorAmbient = Color3.fromRGB(34, 0, 49)
+                    Lighting.FogColor = Color3.fromRGB(94, 76, 106)
+                    Lighting.FogEnd = 1000
+                    Lighting.FogStart = 0
+                    Lighting.ExposureCompensation = shaderSettings.Exposure
+                    Lighting.ShadowSoftness = 0
+                    Lighting.Ambient = Color3.fromRGB(59, 33, 27)
+
+                    for _, data in ipairs({
+                        { "BloomEffect", { Intensity = shaderSettings.BloomIntensity, Threshold = 0, Size = 100 } },
+                        { "BlurEffect", { Size = 2 } },
+                        { "ColorCorrectionEffect", { Saturation = shaderSettings.Saturation, TintColor = shaderSettings.TintColor } },
+                        { "SunRaysEffect", { Intensity = 0.05 } },
+                    }) do
+                        local instance = Instance.new(data[1])
+                        instance.Name = "RSC"
+                        instance:SetAttribute("RSC", true)
+
+                        for k, v in pairs(data[2]) do
+                            instance[k] = v
+                        end
+
+                        instance.Parent = Lighting
+                        GfxShader.Effects[data[1]] = instance
+                    end
+                end)
+            else
+                pcall(function()
+                    for k, v in pairs(GfxShader.Lighting) do
+                        Lighting[k] = v
+                    end
+                end)
+            end
+        end,
+    })
+
+    pcall(function()
+        local shaderToggle = Library.Options.ShadersT
+        shaderToggle:AddColorPicker("ShaderTintColor", {
+            Default = GfxShader.Settings.TintColor,
+            Title = "Tint Color",
+            Callback = function(tintColor)
+                GfxShader.Settings.TintColor = tintColor
+                local cc = GfxShader.Effects.ColorCorrectionEffect
+                if cc and cc.Parent then
+                    pcall(function() cc.TintColor = tintColor end)
+                end
+            end,
+        })
+    end)
+
+    local ShaderBox = GfxDepbox({ { Library.Options.ShadersT, true } })
+
+    if ShaderBox then
+        ShaderBox:AddSlider("ShaderBrightness", {
+            Text = "Brightness",
+            Default = GfxShader.Settings.Brightness,
+            Min = 0,
+            Max = 5,
+            Rounding = 2,
+            Compact = true,
+            Callback = function(brightness)
+                GfxShader.Settings.Brightness = brightness
+                if GfxFlags.Shaders then
+                    pcall(function() Lighting.Brightness = brightness end)
+                end
+            end,
+        })
+
+        ShaderBox:AddSlider("ShaderExposure", {
+            Text = "Exposure",
+            Default = GfxShader.Settings.Exposure,
+            Min = -3,
+            Max = 3,
+            Rounding = 2,
+            Compact = true,
+            Callback = function(exposure)
+                GfxShader.Settings.Exposure = exposure
+                if GfxFlags.Shaders then
+                    pcall(function() Lighting.ExposureCompensation = exposure end)
+                end
+            end,
+        })
+
+        ShaderBox:AddSlider("ShaderBloomIntensity", {
+            Text = "Bloom Intensity",
+            Default = GfxShader.Settings.BloomIntensity,
+            Min = 0,
+            Max = 3,
+            Rounding = 2,
+            Compact = true,
+            Callback = function(bloomIntensity)
+                GfxShader.Settings.BloomIntensity = bloomIntensity
+                local bloom = GfxShader.Effects.BloomEffect
+                if bloom and bloom.Parent then
+                    pcall(function() bloom.Intensity = bloomIntensity end)
+                end
+            end,
+        })
+
+        ShaderBox:AddSlider("ShaderSaturation", {
+            Text = "Saturation",
+            Default = GfxShader.Settings.Saturation,
+            Min = -1,
+            Max = 1,
+            Rounding = 2,
+            Compact = true,
+            Callback = function(saturation)
+                GfxShader.Settings.Saturation = saturation
+                local cc = GfxShader.Effects.ColorCorrectionEffect
+                if cc and cc.Parent then
+                    pcall(function() cc.Saturation = saturation end)
+                end
+            end,
+        })
+    end
+
+    GfxDivider("Particles")
+
+    local ParticlesToggle = Graphics:AddToggle("ParticlesT", {
+        Text = "Particles",
+        Default = false,
+        Callback = GfxSetParticlesEnabled,
+    })
+
+    pcall(function()
+        ParticlesToggle:AddColorPicker("ParticlesCo", {
+            Default = GfxState.ParticleSettings.Color,
+            Title = "Color",
+            Callback = function(value)
+                GfxSetParticleProp("Color", value)
+            end,
+        })
+    end)
+
+    local ParticlesBox = GfxDepbox({ { Library.Options.ParticlesT, true } })
+
+    if ParticlesBox then
+        ParticlesBox:AddDropdown("ParticlesDropdown", {
+            Values = { "Circles", "Snowflakes", "Resonance", "Custom" },
+            Multi = false,
+            Default = "Circles",
+            Searchable = true,
+            Text = "Texture",
+            Callback = function(value)
+                if value == "Resonance" then
+                    GfxSetParticleProp("Texture", "rbxassetid://79685990879972")
+                elseif value == "Snowflakes" then
+                    GfxSetParticleProp("Texture", "rbxassetid://14443362047")
+                elseif value == "Circles" then
+                    GfxSetParticleProp("Texture", "rbxassetid://242109931")
+                elseif value == "Custom" and GfxValues.CustomParticle then
+                    GfxSetParticleProp("Texture", GfxValues.CustomParticle)
+                end
+            end,
+        })
+
+        local CustomBox = nil
+        pcall(function()
+            CustomBox = ParticlesBox:AddDependencyBox()
+            CustomBox:SetupDependencies({ { Library.Options.ParticlesDropdown, "Custom" } })
+        end)
+
+        if CustomBox then
+            CustomBox:AddInput("customParticleBoxInput", {
+                Text = "Custom Image ID/Link",
+                ClearTextOnFocus = false,
+                Callback = function(text)
+                    GfxResolveAssetInput(text, "ParticleTexture", "image", function(asset)
+                        GfxValues.CustomParticle = asset
+                        local dropdown = Library.Options.ParticlesDropdown
+                        if dropdown and dropdown.Value == "Custom" then
+                            GfxSetParticleProp("Texture", asset or "rbxassetid://242109931")
+                        end
+                    end)
+                end,
+            })
+        end
+
+        ParticlesBox:AddSlider("PDensity", {
+            Text = "Density (Count)",
+            Default = GfxState.ParticleSettings.Count,
+            Min = 100,
+            Max = 5000,
+            Compact = true,
+            Callback = function(value)
+                GfxSetParticleProp("Count", value)
+            end,
+        })
+
+        ParticlesBox:AddSlider("PSize", {
+            Text = "Size",
+            Default = GfxState.ParticleSettings.ParticleSize,
+            Min = 0.1,
+            Max = 5,
+            Rounding = 1,
+            Compact = true,
+            Callback = function(value)
+                GfxSetParticleProp("ParticleSize", value)
+            end,
+        })
+
+        ParticlesBox:AddSlider("PMaxSp", {
+            Text = "Max Speed",
+            Default = GfxState.ParticleSettings.SpeedMax,
+            Min = 0,
+            Max = 10,
+            Rounding = 1,
+            Compact = true,
+            Callback = function(value)
+                GfxSetParticleProp("SpeedMax", value)
+            end,
+        })
+
+        ParticlesBox:AddSlider("PBoxSize", {
+            Text = "Box Size",
+            Default = GfxState.ParticleSettings.BoxSize,
+            Min = 50,
+            Max = 2000,
+            Compact = true,
+            Callback = function(value)
+                GfxSetParticleProp("BoxSize", value)
+            end,
+        })
+    end
+
+    GfxDivider("Boost FPS")
+
+    Graphics:AddToggle("BoostFPS", {
+        Text = "Boost FPS",
+        Default = false,
+        Callback = GfxSetBoostFPS,
+    })
+
+    Graphics:AddDropdown("BoostFPSOptions", {
+        Text = "Disable",
+        Values = { "Materials", "Textures", "Reflections", "Shadows" },
+        Default = { "Materials", "Textures", "Reflections", "Shadows" },
+        Multi = true,
+        AllowNull = true,
+        Callback = GfxSetBoostFPSOptions,
+    })
+
+    GfxUnload = function()
+        pcall(function() GfxSetParticlesEnabled(false) end)
+        pcall(function() GfxSetBoostFPS(false) end)
+        pcall(function() GfxSetConn("BoostFPSAdded", nil, false) end)
+        pcall(GfxRestoreWaterSettings)
+        pcall(GfxRemoveShaderEffects)
+        pcall(function() GfxPart:Destroy() end)
+        for _, conn in pairs(GfxState.RuntimeConnections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        table.clear(GfxState.RuntimeConnections)
+    end
+end
 
 -- =====================================================================
 -- ВКЛАДКА PLAYER (функции Resonance, точь-в-точь из модулей)
