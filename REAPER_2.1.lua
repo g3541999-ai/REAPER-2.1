@@ -553,15 +553,15 @@ local ShaderPresets = {
         Atmosphere={Density=0.3,Offset=0.2,Haze=1.6,Glare=0.05,Color=Color3.fromRGB(90,95,115),Decay=Color3.fromRGB(80,85,105)},
     },
     ["Чёрная дыра"] = {
-        Lighting = { Brightness=0.9, ClockTime=0, FogEnd=600, FogStart=0, FogColor=Color3.fromRGB(8,8,12), ExposureCompensation=0.1, ShadowSoftness=0.2, Ambient=Color3.fromRGB(8,8,14), ColorShift_Top=Color3.fromRGB(60,30,110), OutdoorAmbient=Color3.fromRGB(14,10,30) },
-        Bloom={Intensity=1.4,Threshold=0.55,Size=60}, Blur={Size=0.4},
-        ColorCorrection={Saturation=-0.25,Contrast=0.5,TintColor=Color3.fromRGB(200,190,255)},
-        Atmosphere={Density=0.6,Offset=0.1,Haze=2.8,Glare=0,Color=Color3.fromRGB(40,20,80),Decay=Color3.fromRGB(10,5,25)},
+        Lighting = { Brightness=1.7, ClockTime=0, FogEnd=2500, FogStart=0, FogColor=Color3.fromRGB(40,38,55), ExposureCompensation=0.22, ShadowSoftness=0.3, Ambient=Color3.fromRGB(48,46,70), ColorShift_Top=Color3.fromRGB(120,90,190), OutdoorAmbient=Color3.fromRGB(70,62,110) },
+        Bloom={Intensity=0.9,Threshold=0.7,Size=50}, Blur={Size=0.2},
+        ColorCorrection={Saturation=-0.1,Contrast=0.22,TintColor=Color3.fromRGB(225,218,255)},
+        Atmosphere={Density=0.35,Offset=0.1,Haze=1.6,Glare=0,Color=Color3.fromRGB(90,70,150),Decay=Color3.fromRGB(40,28,80)},
     },
     ["Пульсар"] = {
-        Lighting = { Brightness=0.75, ClockTime=0, FogEnd=100000, ExposureCompensation=-0.15, ShadowSoftness=0.6, Ambient=Color3.fromRGB(18,20,28), ColorShift_Top=Color3.fromRGB(120,150,255), OutdoorAmbient=Color3.fromRGB(25,32,60) },
-        ColorCorrection={Brightness=-0.05,Saturation=-0.2,Contrast=0.55,TintColor=Color3.fromRGB(190,205,255)},
-        Atmosphere={Density=0.45,Offset=0.15,Haze=2.0,Glare=0.1,Color=Color3.fromRGB(60,80,140),Decay=Color3.fromRGB(20,25,45)},
+        Lighting = { Brightness=1.45, ClockTime=0, FogEnd=5000, ExposureCompensation=-0.05, ShadowSoftness=0.55, Ambient=Color3.fromRGB(52,56,74), ColorShift_Top=Color3.fromRGB(140,165,255), OutdoorAmbient=Color3.fromRGB(62,72,110) },
+        ColorCorrection={Brightness=0.02,Saturation=-0.08,Contrast=0.22,TintColor=Color3.fromRGB(220,228,255)},
+        Atmosphere={Density=0.3,Offset=0.15,Haze=1.3,Glare=0.1,Color=Color3.fromRGB(110,125,180),Decay=Color3.fromRGB(60,68,100)},
     },
 }
 
@@ -783,8 +783,8 @@ local function ApplyShader(shaderName, level)
                 local ph = 0.5 + 0.5 * math.sin(os.clock() * 2.4)
                 local t2 = (tonumber(ShaderState.Level) or 8) / 10
                 local pre = ShaderPresets["Пульсар"]
-                b.Intensity = (0.5 + 3.5 * ph * ph) * t2
-                Lighting.Brightness = lerpNum(Original.Lighting.Brightness, pre.Lighting.Brightness, t2) * (0.85 + 0.65 * ph)
+                b.Intensity = (0.5 + 2.5 * ph * ph) * t2
+                Lighting.Brightness = lerpNum(Original.Lighting.Brightness, pre.Lighting.Brightness, t2) * (0.95 + 0.45 * ph)
             end)
         end
     end
