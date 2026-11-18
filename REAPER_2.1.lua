@@ -32,11 +32,6 @@ local loaderCorner = Instance.new("UICorner")
 loaderCorner.CornerRadius = UDim.new(0, 10)
 loaderCorner.Parent = loaderFrame
 
-local loaderStroke = Instance.new("UIStroke")
-loaderStroke.Color = Color3.fromRGB(125, 85, 255)
-loaderStroke.Thickness = 1
-loaderStroke.Parent = loaderFrame
-
 local loaderTitle = Instance.new("TextLabel")
 loaderTitle.Size = UDim2.new(1, 0, 0, 30)
 loaderTitle.Position = UDim2.new(0, 0, 0, 12)
@@ -135,7 +130,6 @@ function PulsarLoaderComplete()
         TweenService:Create(loaderFrame, out, { Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderBar, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderFill, out, { BackgroundTransparency = 1 }):Play()
-        if loaderStroke then loaderStroke.Transparency = 1 end
     end)
     task.wait(0.3)
     pcall(function() loaderGui:Destroy() end)
