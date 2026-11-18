@@ -743,7 +743,21 @@ end
 -- =====================================================================
 local STORM_THUNDER_IDS = { 98719867425764, 133426162, 4961240438 }
 local SoundService = game:GetService("SoundService")
-local Storm = { Zone = nil, Sound = nil, MoveConn = nil, FlashConn = nil }
+local Storm = { Zone = nil, Sound = nil, MoveConn = nil, FlashConn = nil, Rain = nil }
+
+local RainSettings = { Density = 40, Speed = 100, Size = 0.22 }
+
+local function ApplyRainSettings()
+    local rain = Storm.Rain
+    if rain and rain.Parent then
+        local level = tonumber(ShaderState.Level) or 8
+        pcall(function()
+            rain.Rate = RainSettings.Density * level
+            rain.Speed = NumberRange.new(math.max(RainSettings.Speed - 10, 0), RainSettings.Speed + 10)
+            rain.Size = NumberSequence.new(RainSettings.Size)
+        end)
+    end
+end
 
 StormStop = function()
     if Storm.FlashConn then
@@ -752,6 +766,7 @@ StormStop = function()
     end
     if Storm.MoveConn then Storm.MoveConn:Disconnect() Storm.MoveConn = nil end
     if Storm.Zone then Storm.Zone:Destroy() Storm.Zone = nil end
+    Storm.Rain = nil
     Storm.Sound = nil
 end
 
@@ -774,15 +789,16 @@ StormStart = function(level)
     rain.Name = "PulsarRain"
     rain.Texture = "rbxasset://textures/particles/smoke_main.dds"
     rain.Color = ColorSequence.new(Color3.fromRGB(165, 175, 200))
-    rain.Size = NumberSequence.new(0.22)
+    rain.Size = NumberSequence.new(RainSettings.Size)
     rain.Transparency = NumberSequence.new(0.4)
     rain.Lifetime = NumberRange.new(0.9, 1.1)
-    rain.Rate = 40 * level
-    rain.Speed = NumberRange.new(90, 110)
+    rain.Rate = RainSettings.Density * level
+    rain.Speed = NumberRange.new(math.max(RainSettings.Speed - 10, 0), RainSettings.Speed + 10)
     rain.EmissionDirection = Enum.NormalId.Bottom
     rain.SpreadAngle = Vector2.new(4, 4)
     rain.Parent = zone
     Storm.Zone = zone
+    Storm.Rain = rain
 
     for _, id in ipairs(STORM_THUNDER_IDS) do
         local s = Instance.new("Sound")
@@ -837,12 +853,14 @@ end
 
 local PulsarSoundMuteOff
 local GfxUnload
+local RainCleanerOff
 
 local function VisualsCleanup()
     StormStop()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
     if GfxUnload then pcall(GfxUnload) end
+    if RainCleanerOff then pcall(RainCleanerOff) end
     Updaters = {}
     if VisualHeartbeat then
         VisualHeartbeat:Disconnect()
@@ -1013,6 +1031,159 @@ for _, cat in ipairs(SoundCategories) do
     })
 end
 
+-- =====================================================================
+-- ЧИСТИЛЬЩИК ДОЖДЯ (Visual — левая колонка)
+-- =====================================================================
+local RainGroup = VisualTab:AddLeftGroupbox("Чистильщик дождя")
+
+local RainPatterns = { "rain", "raindrop", "rainzone" }
+
+local RainCleaner = { GuardConn = nil, SavedClouds = nil }
+
+local function RainMatches(obj)
+    local node = obj
+    local names = {}
+    while node and node ~= game do
+        names[#names + 1] = string.lower(node.Name)
+        node = node.Parent
+    end
+    for _, pattern in ipairs(RainPatterns) do
+        for _, name in ipairs(names) do
+            if string.find(name, pattern, 1, true) then return true end
+        end
+    end
+    return false
+end
+
+local function RainGetClouds()
+    local terrain = workspace:FindFirstChildOfClass("Terrain")
+    return terrain and terrain:FindFirstChildOfClass("Clouds")
+end
+
+local function RainHideClouds(save)
+    pcall(function()
+        local clouds = RainGetClouds()
+        if not clouds then return end
+        if save then
+            RainCleaner.SavedClouds = { Enabled = clouds.Enabled, Cover = clouds.Cover }
+        end
+        clouds.Enabled = false
+    end)
+end
+
+local function RainRestoreClouds()
+    pcall(function()
+        local clouds = RainGetClouds()
+        local saved = RainCleaner.SavedClouds
+        if clouds and saved then
+            clouds.Enabled = saved.Enabled
+            clouds.Cover = saved.Cover
+        end
+        RainCleaner.SavedClouds = nil
+    end)
+end
+
+local function RainWash()
+    pcall(function() StormStop() end)
+    local containers = { workspace }
+    pcall(function()
+        if workspace.CurrentCamera then
+            containers[#containers + 1] = workspace.CurrentCamera
+        end
+    end)
+    for _, container in ipairs(containers) do
+        pcall(function()
+            for _, obj in ipairs(container:GetDescendants()) do
+                if obj:IsA("ParticleEmitter") and RainMatches(obj) then
+                    pcall(function() obj.Enabled = false end)
+                    pcall(function() obj:Destroy() end)
+                elseif obj:IsA("Clouds") then
+                    pcall(function() obj.Enabled = false end)
+                end
+            end
+        end)
+    end
+end
+
+RainCleanerOff = function()
+    if RainCleaner.GuardConn then
+        pcall(function() RainCleaner.GuardConn:Disconnect() end)
+        RainCleaner.GuardConn = nil
+    end
+    RainRestoreClouds()
+end
+
+RainGroup:AddButton({
+    Text = "Смыть дождь",
+    Func = function()
+        RainWash()
+        pcall(function() Library:Notify("Дождь смыт") end)
+    end,
+})
+
+RainGroup:AddToggle("PulsarNoRain", {
+    Text = "Без дождя",
+    Default = false,
+    Callback = function(on)
+        if on then
+            RainHideClouds(true)
+            RainWash()
+            RainCleaner.GuardConn = game.DescendantAdded:Connect(function(obj)
+                if obj:IsA("Clouds") then
+                    pcall(function() obj.Enabled = false end)
+                    return
+                end
+                if not obj:IsA("ParticleEmitter") then return end
+                task.defer(function()
+                    pcall(function()
+                        if RainCleaner.GuardConn and RainMatches(obj) then
+                            obj.Enabled = false
+                            obj:Destroy()
+                        end
+                    end)
+                end)
+            end)
+        else
+            RainCleanerOff()
+        end
+    end,
+})
+
+RainGroup:AddSlider("PulsarRainDensity", {
+    Text = "Плотность дождя",
+    Default = RainSettings.Density,
+    Min = 0,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(v)
+        RainSettings.Density = v
+        ApplyRainSettings()
+    end,
+})
+
+RainGroup:AddSlider("PulsarRainSpeed", {
+    Text = "Скорость дождя",
+    Default = RainSettings.Speed,
+    Min = 0,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(v)
+        RainSettings.Speed = v
+        ApplyRainSettings()
+    end,
+})
+
+RainGroup:AddSlider("PulsarRainSize", {
+    Text = "Размер капель",
+    Default = RainSettings.Size,
+    Min = 0.05,
+    Max = 2,
+    Rounding = 2,
+    Callback = function(v)
+        RainSettings.Size = v
+        ApplyRainSettings()
+    end,
+})
 
 -- =====================================================================
 -- VISUAL — GRAPHICS (скопировано с Resonance 2.9 — окно Graphics вкладки Visual)
@@ -1742,10 +1913,10 @@ do
 
     local Graphics
     local okGraphics = pcall(function()
-        Graphics = VisualTab:AddRightGroupbox("Graphics", "file-image")
+        Graphics = VisualTab:AddLeftGroupbox("Graphics", "file-image")
     end)
     if not okGraphics or not Graphics then
-        Graphics = VisualTab:AddRightGroupbox("Graphics")
+        Graphics = VisualTab:AddLeftGroupbox("Graphics")
     end
 
     local function GfxDivider(name)
