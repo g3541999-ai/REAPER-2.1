@@ -312,7 +312,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 12")
-StatsGroup:AddLabel("Шейдеров: 8")
+StatsGroup:AddLabel("Шейдеров: 10")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -552,9 +552,20 @@ local ShaderPresets = {
         ColorCorrection={Saturation=-0.12,Contrast=0.18,TintColor=Color3.fromRGB(215,220,235)},
         Atmosphere={Density=0.3,Offset=0.2,Haze=1.6,Glare=0.05,Color=Color3.fromRGB(90,95,115),Decay=Color3.fromRGB(80,85,105)},
     },
+    ["Чёрная дыра"] = {
+        Lighting = { Brightness=0.9, ClockTime=0, FogEnd=600, FogStart=0, FogColor=Color3.fromRGB(8,8,12), ExposureCompensation=0.1, ShadowSoftness=0.2, Ambient=Color3.fromRGB(8,8,14), ColorShift_Top=Color3.fromRGB(60,30,110), OutdoorAmbient=Color3.fromRGB(14,10,30) },
+        Bloom={Intensity=1.4,Threshold=0.55,Size=60}, Blur={Size=0.4},
+        ColorCorrection={Saturation=-0.25,Contrast=0.5,TintColor=Color3.fromRGB(200,190,255)},
+        Atmosphere={Density=0.6,Offset=0.1,Haze=2.8,Glare=0,Color=Color3.fromRGB(40,20,80),Decay=Color3.fromRGB(10,5,25)},
+    },
+    ["Пульсар"] = {
+        Lighting = { Brightness=0.75, ClockTime=0, FogEnd=100000, ExposureCompensation=-0.15, ShadowSoftness=0.6, Ambient=Color3.fromRGB(18,20,28), ColorShift_Top=Color3.fromRGB(120,150,255), OutdoorAmbient=Color3.fromRGB(25,32,60) },
+        ColorCorrection={Brightness=-0.05,Saturation=-0.2,Contrast=0.55,TintColor=Color3.fromRGB(190,205,255)},
+        Atmosphere={Density=0.45,Offset=0.15,Haze=2.0,Glare=0.1,Color=Color3.fromRGB(60,80,140),Decay=Color3.fromRGB(20,25,45)},
+    },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful", "Thunderstorm" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful", "Thunderstorm", "Чёрная дыра", "Пульсар" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -727,6 +738,54 @@ local function ApplyShader(shaderName, level)
             clouds.Cover = math.clamp(0.4 + t * 0.5, 0, 1)
             clouds.Density = 0.7
             clouds.Color = Color3.fromRGB(120, 125, 135)
+        end
+    end
+
+    if shaderName == "Чёрная дыра" then
+        local bhBlack = "rbxasset://textures/blackBkg_square.png"
+        local bhSky = Instance.new("Sky", Lighting)
+        bhSky.Name = "SavitarBHSky"
+        bhSky.SkyboxFt = "rbxassetid://5436396975"
+        bhSky.SkyboxBk = bhBlack
+        bhSky.SkyboxLf = bhBlack
+        bhSky.SkyboxRt = bhBlack
+        bhSky.SkyboxUp = bhBlack
+        bhSky.SkyboxDn = bhBlack
+        bhSky.CelestialBodiesShown = false
+        bhSky.StarCount = 0
+        ActiveEffects[#ActiveEffects+1] = bhSky
+    end
+
+    if shaderName == "Пульсар" then
+        local pBlack = "rbxasset://textures/blackBkg_square.png"
+        local pSky = Instance.new("Sky", Lighting)
+        pSky.Name = "SavitarPulsarSky"
+        pSky.SkyboxBk = pBlack
+        pSky.SkyboxFt = pBlack
+        pSky.SkyboxLf = pBlack
+        pSky.SkyboxRt = pBlack
+        pSky.SkyboxUp = pBlack
+        pSky.SkyboxDn = pBlack
+        pSky.CelestialBodiesShown = false
+        pSky.StarCount = 3000
+        ActiveEffects[#ActiveEffects+1] = pSky
+        local pBloom = Instance.new("BloomEffect", Lighting)
+        pBloom.Name = "SavitarPulsarBloom"
+        pBloom.Threshold = 0.4
+        pBloom.Size = 30
+        pBloom.Intensity = 1
+        ActiveEffects[#ActiveEffects+1] = pBloom
+        if not ShaderState.PulsarHooked then
+            ShaderState.PulsarHooked = true
+            AddUpdater(function()
+                local b = ShaderState.PulsarBloom
+                if not (ShaderState.Active and ShaderState.CurrentName == "Пульсар" and b and b.Parent) then return end
+                local ph = 0.5 + 0.5 * math.sin(os.clock() * 2.4)
+                local t2 = (tonumber(ShaderState.Level) or 8) / 10
+                local pre = ShaderPresets["Пульсар"]
+                b.Intensity = (0.5 + 3.5 * ph * ph) * t2
+                Lighting.Brightness = lerpNum(Original.Lighting.Brightness, pre.Lighting.Brightness, t2) * (0.85 + 0.65 * ph)
+            end)
         end
     end
 
@@ -1439,8 +1498,9 @@ do
         ["Paw"] = "rbxassetid://6803084085",
         ["Lightning"] = "rbxassetid://6772766551",
         ["Explosion"] = "rbxassetid://5833235272",
+        ["Skull"] = "rbxassetid://2682121938",
     }
-    local ParticleTextureOrder = { "Dot", "Sparkles", "Fire", "Smoke", "Sparks", "Star", "Star Small", "Heart", "Diamond", "Leaf", "Paw", "Lightning", "Explosion" }
+    local ParticleTextureOrder = { "Dot", "Sparkles", "Fire", "Smoke", "Sparks", "Star", "Star Small", "Heart", "Diamond", "Leaf", "Paw", "Lightning", "Explosion", "Skull" }
 
     local ParticlesBox = GfxDepbox({ { Library.Options.ParticlesT, true } })
 
