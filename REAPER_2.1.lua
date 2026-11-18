@@ -76,7 +76,7 @@ function PulsarLoaderComplete()
 end
 
 -- =====================================================================
--- ОКНО FPS | ПИНГ (левый верх, перетаскиваемое, после загрузки меню)
+-- ОКНО FPS | ПИНГ (левый верх, чёрная карточка, перетаскиваемая)
 -- =====================================================================
 local StatsGui = Instance.new("ScreenGui")
 StatsGui.Name = "PulsarStats"
@@ -89,8 +89,9 @@ local StatsFrame = Instance.new("Frame")
 StatsFrame.AnchorPoint = Vector2.new(0, 0)
 StatsFrame.Position = UDim2.fromOffset(10, 10)
 StatsFrame.Size = UDim2.fromOffset(290, 36)
-StatsFrame.BackgroundColor3 = Color3.fromRGB(36, 38, 43)
+StatsFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 StatsFrame.BorderSizePixel = 0
+StatsFrame.Active = true
 StatsFrame.Parent = StatsGui
 
 local StatsCorner = Instance.new("UICorner")
@@ -98,12 +99,12 @@ StatsCorner.CornerRadius = UDim.new(0, 8)
 StatsCorner.Parent = StatsFrame
 
 local StatsStroke = Instance.new("UIStroke")
-StatsStroke.Color = Color3.fromRGB(60, 62, 68)
+StatsStroke.Color = Color3.fromRGB(45, 45, 50)
 StatsStroke.Thickness = 1
 StatsStroke.Parent = StatsFrame
 
 local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(1, -56, 1, 0)
+StatsLabel.Size = UDim2.new(1, -20, 1, 0)
 StatsLabel.Position = UDim2.fromOffset(10, 0)
 StatsLabel.BackgroundTransparency = 1
 StatsLabel.Text = "PULSAR 2.3 | FPS: 0 | Пинг: 0 мс"
@@ -112,30 +113,6 @@ StatsLabel.Font = Enum.Font.Gotham
 StatsLabel.TextSize = 12
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatsLabel.Parent = StatsFrame
-
-local StatsPill = Instance.new("Frame")
-StatsPill.AnchorPoint = Vector2.new(1, 0.5)
-StatsPill.Position = UDim2.new(1, -10, 0.5, 0)
-StatsPill.Size = UDim2.fromOffset(26, 14)
-StatsPill.BackgroundColor3 = Color3.fromRGB(69, 169, 81)
-StatsPill.BorderSizePixel = 0
-StatsPill.Parent = StatsFrame
-
-local StatsPillCorner = Instance.new("UICorner")
-StatsPillCorner.CornerRadius = UDim.new(1, 0)
-StatsPillCorner.Parent = StatsPill
-
-local StatsKnob = Instance.new("Frame")
-StatsKnob.AnchorPoint = Vector2.new(1, 0.5)
-StatsKnob.Position = UDim2.new(1, -2, 0.5, 0)
-StatsKnob.Size = UDim2.fromOffset(10, 10)
-StatsKnob.BackgroundColor3 = Color3.new(1, 1, 1)
-StatsKnob.BorderSizePixel = 0
-StatsKnob.Parent = StatsPill
-
-local StatsKnobCorner = Instance.new("UICorner")
-StatsKnobCorner.CornerRadius = UDim.new(1, 0)
-StatsKnobCorner.Parent = StatsKnob
 
 local StatsDragService = game:GetService("UserInputService")
 local statsDragging = false
@@ -147,11 +124,12 @@ StatsFrame.InputBegan:Connect(function(input)
         statsDragging = true
         statsDragStart = input.Position
         statsStartPos = StatsFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                statsDragging = false
-            end
-        end)
+    end
+end)
+
+StatsDragService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        statsDragging = false
     end
 end)
 
