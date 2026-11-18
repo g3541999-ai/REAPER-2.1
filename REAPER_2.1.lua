@@ -533,9 +533,16 @@ local ShaderPresets = {
         SunRays={Intensity=0.08,Spread=0.65},
         Atmosphere={Density=0.18,Offset=0.15,Haze=0.6,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
     },
+    ["Thunderstorm"] = {
+        Lighting = { Brightness=0.9, ClockTime=19.2, FogEnd=700, FogStart=0, FogColor=Color3.fromRGB(40,42,50), ExposureCompensation=-0.1, ShadowSoftness=0.2, Ambient=Color3.fromRGB(24,25,30), ColorShift_Top=Color3.fromRGB(90,100,130), OutdoorAmbient=Color3.fromRGB(45,48,60) },
+        Blur={Size=1.2},
+        ColorCorrection={Saturation=-0.18,Contrast=0.3,TintColor=Color3.fromRGB(200,210,230)},
+        SunRays={Intensity=0,Spread=0.6},
+        Atmosphere={Density=0.45,Offset=0.2,Haze=2.2,Glare=0.05,Color=Color3.fromRGB(70,75,95),Decay=Color3.fromRGB(60,65,85)},
+    },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful", "Thunderstorm" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -605,6 +612,7 @@ local function lerpColor(a, b, t)
 end
 
 local ShaderState = { Active = false, CurrentName = "Scarlet Atmosphere", Level = 8 }
+local StormStart, StormStop
 
 local function ApplyShader(shaderName, level)
     SaveOriginal()
@@ -690,6 +698,12 @@ local function ApplyShader(shaderName, level)
         ActiveEffects[#ActiveEffects+1] = sky
     end
 
+    if shaderName == "Thunderstorm" then
+        StormStart(level)
+    else
+        StormStop()
+    end
+
     ShaderState.Active = true
     ShaderState.CurrentName = shaderName
     ShaderState.Level = level
@@ -699,10 +713,99 @@ end
 local function RemoveShader()
     DestroyEffects()
     RestoreOriginal()
+    StormStop()
     ShaderState.Active = false
 end
 
+-- =====================================================================
+-- ГРОЗА (ливень + молнии со звуком) — для пресета Thunderstorm
+-- =====================================================================
+local STORM_THUNDER_IDS = { 98719867425764, 4961240438 }
+local SoundService = game:GetService("SoundService")
+local Storm = { Zone = nil, Sound = nil, MoveConn = nil, FlashConn = nil }
+
+StormStop = function()
+    if Storm.FlashConn then
+        pcall(function() task.cancel(Storm.FlashConn) end)
+        Storm.FlashConn = nil
+    end
+    if Storm.MoveConn then Storm.MoveConn:Disconnect() Storm.MoveConn = nil end
+    if Storm.Zone then Storm.Zone:Destroy() Storm.Zone = nil end
+    Storm.Sound = nil
+end
+
+StormStart = function(level)
+    StormStop()
+    level = math.clamp(tonumber(level) or 8, 0, 10)
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+
+    local zone = Instance.new("Part")
+    zone.Name = "PulsarRainZone"
+    zone.Anchored = true
+    zone.CanCollide = false
+    zone.CanQuery = false
+    zone.Transparency = 1
+    zone.Size = Vector3.new(60, 1, 60)
+    zone.Parent = cam
+
+    local rain = Instance.new("ParticleEmitter")
+    rain.Name = "PulsarRain"
+    rain.Texture = "rbxasset://textures/particles/smoke_main.dds"
+    rain.Color = ColorSequence.new(Color3.fromRGB(165, 175, 200))
+    rain.Size = NumberSequence.new(0.22)
+    rain.Transparency = NumberSequence.new(0.4)
+    rain.Lifetime = NumberRange.new(0.9, 1.1)
+    rain.Rate = 40 * level
+    rain.Speed = NumberRange.new(90, 110)
+    rain.EmissionDirection = Enum.NormalId.Bottom
+    rain.SpreadAngle = Vector2.new(4, 4)
+    rain.Parent = zone
+    Storm.Zone = zone
+
+    for _, id in ipairs(STORM_THUNDER_IDS) do
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://" .. id
+        s.Volume = 0.8
+        s.Parent = zone
+        local ok = pcall(function() SoundService:PreloadAsync({ s }) end)
+        if ok and s.TimeLength > 0 then
+            Storm.Sound = s
+            break
+        end
+        s:Destroy()
+    end
+
+    Storm.MoveConn = RunService.Heartbeat:Connect(function()
+        local c = workspace.CurrentCamera
+        if Storm.Zone and c then
+            Storm.Zone.CFrame = CFrame.new(c.CFrame.Position + c.CFrame.LookVector * 20 + Vector3.new(0, 45, 0))
+        end
+    end)
+
+    Storm.FlashConn = task.spawn(function()
+        while Storm.Zone and Storm.Zone.Parent do
+            task.wait(math.random(4, 11))
+            if not (Storm.Zone and Storm.Zone.Parent) then break end
+            local base = Lighting.Brightness
+            pcall(function()
+                Lighting.Brightness = base + 2.5
+                task.wait(0.08)
+                Lighting.Brightness = base + 0.5
+                task.wait(0.12)
+                Lighting.Brightness = base
+            end)
+            if Storm.Sound then
+                task.delay(0.4, function()
+                    pcall(function() Storm.Sound:Play() end)
+                end)
+            end
+        end
+    end)
+end
+
 local function VisualsCleanup()
+    StormStop()
     RemoveShader()
     Updaters = {}
     if VisualHeartbeat then
