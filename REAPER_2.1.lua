@@ -50,8 +50,6 @@ end
 
 local HomeGroup = TabObjects["Home"]:AddLeftGroupbox("Main Functions")
 
-local PlayerGroup = TabObjects["Home"]:AddRightGroupbox("Игроки")
-
 local HotkeyGroup = TabObjects["Home"]:AddLeftGroupbox("Горячие клавиши")
 HotkeyGroup:AddLabel("Right Shift — открыть/закрыть меню")
 
@@ -97,6 +95,26 @@ task.spawn(function()
     end
 end)
 
+local function CopyText(text)
+    if type(text) ~= "string" or text == "" then return false end
+    local ok = pcall(function() setclipboard(text) end)
+    if not ok then
+        ok = pcall(function() toclipboard(text) end)
+    end
+    return ok
+end
+
+local PlayerImages = {}
+local function BuildPlayerValues()
+    local values = {}
+    PlayerImages = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        values[#values + 1] = plr.Name
+        PlayerImages[plr.Name] = "rbxthumb://type=AvatarHeadShot&w=48&h=48&id=" .. plr.UserId
+    end
+    return values
+end
+
 HomeGroup:AddButton({
     Text = "Список игроков",
     Func = function()
@@ -125,27 +143,7 @@ HomeGroup:AddButton({
     end
 })
 
-local function CopyText(text)
-    if type(text) ~= "string" or text == "" then return false end
-    local ok = pcall(function() setclipboard(text) end)
-    if not ok then
-        ok = pcall(function() toclipboard(text) end)
-    end
-    return ok
-end
-
-local PlayerImages = {}
-local function BuildPlayerValues()
-    local values = {}
-    PlayerImages = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        values[#values + 1] = plr.Name
-        PlayerImages[plr.Name] = "rbxthumb://type=AvatarHeadShot&w=48&h=48&id=" .. plr.UserId
-    end
-    return values
-end
-
-PlayerGroup:AddDropdown("CopyPlayerDropdown", {
+HomeGroup:AddDropdown("CopyPlayerDropdown", {
     Values = BuildPlayerValues(),
     ValueImages = PlayerImages,
     Multi = true,
@@ -169,7 +167,7 @@ end
 Players.PlayerAdded:Connect(function() task.defer(RefreshPlayerList) end)
 Players.PlayerRemoving:Connect(function() task.defer(RefreshPlayerList) end)
 
-PlayerGroup:AddButton({
+HomeGroup:AddButton({
     Text = "Копировать ник",
     Func = function()
         local val = nil
@@ -192,7 +190,7 @@ PlayerGroup:AddButton({
     end
 })
 
-PlayerGroup:AddButton({
+HomeGroup:AddButton({
     Text = "Копировать все ники",
     Func = function()
         local names = {}
@@ -204,23 +202,6 @@ PlayerGroup:AddButton({
         else
             Library:Notify("Копирование не поддерживается инжектором")
         end
-    end
-})
-
-HomeGroup:AddDivider()
-
-HomeGroup:AddButton({
-    Text = "Нажми меня",
-    Func = function()
-        Library:Notify("Кнопка работает! PULSAR + Obsidian = OK")
-    end
-})
-
-HomeGroup:AddToggle("MyToggle", {
-    Text = "Тестовый переключатель",
-    Default = false,
-    Callback = function(Value)
-        print("Toggle:", Value)
     end
 })
 
