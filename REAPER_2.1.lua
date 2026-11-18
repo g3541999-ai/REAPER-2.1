@@ -280,7 +280,6 @@ local Tabs = {
     { Name = "Blobman",      Icon = "ghost" },
     { Name = "Toys",         Icon = "blocks" },
     { Name = "Visual",       Icon = "eye" },
-    { Name = "Sounds",       Icon = "volume-x" },
     { Name = "Auto-Clicker", Icon = "zap" },
     { Name = "Misc",         Icon = "wrench" },
     { Name = "Lists",        Icon = "list" },
@@ -298,7 +297,7 @@ local HotkeyGroup = TabObjects["Home"]:AddLeftGroupbox("Горячие клав�
 HotkeyGroup:AddLabel("Right Shift — открыть/закрыть меню")
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
-StatsGroup:AddLabel("Вкладок: 13")
+StatsGroup:AddLabel("Вкладок: 12")
 StatsGroup:AddLabel("Шейдеров: 7")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
@@ -900,43 +899,99 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 
 
 -- =====================================================================
--- ВКЛАДКА SOUNDS (отключение игровых звуков как в Resonance 2.9)
+-- ЗВУКИ (блок в вкладке Visual, под шейдерами)
 -- =====================================================================
-local SoundsGroup = TabObjects["Sounds"]:AddLeftGroupbox("Звуки")
-local muteGroup = nil
+local SoundMuteGroup = VisualTab:AddLeftGroupbox("Звуки")
+local allMuteGroup = nil
+local nameMuteGroup = nil
 local MuteSoundConn = nil
+local SelectedMuteNames = {}
+
+local function UninstallGroup(group)
+    if not group then return end
+    pcall(function()
+        for _, obj in ipairs(game:GetDescendants()) do
+            if obj:IsA("Sound") and obj.SoundGroup == group then
+                obj.SoundGroup = nil
+            end
+        end
+    end)
+    pcall(function() group:Destroy() end)
+end
 
 PulsarSoundMuteOff = function()
     if MuteSoundConn then
         MuteSoundConn:Disconnect()
         MuteSoundConn = nil
     end
-    if muteGroup then
-        local group = muteGroup
-        pcall(function()
-            for _, obj in ipairs(game:GetDescendants()) do
-                if obj:IsA("Sound") and obj.SoundGroup == group then
-                    obj.SoundGroup = nil
-                end
-            end
-        end)
-        pcall(function() group:Destroy() end)
-        muteGroup = nil
-    end
+    UninstallGroup(allMuteGroup)
+    allMuteGroup = nil
+    UninstallGroup(nameMuteGroup)
+    nameMuteGroup = nil
 end
 
-SoundsGroup:AddToggle("PulsarMuteSounds", {
-    Text = "Отключить звуки игры",
+local function EnsureMuteWatcher()
+    if MuteSoundConn then return end
+    MuteSoundConn = game.DescendantAdded:Connect(function(obj)
+        if not obj:IsA("Sound") then return end
+        task.defer(function()
+            pcall(function()
+                if allMuteGroup and obj.SoundGroup == nil then
+                    obj.SoundGroup = allMuteGroup
+                end
+                if nameMuteGroup and SelectedMuteNames[obj.Name] then
+                    obj.SoundGroup = nameMuteGroup
+                end
+            end)
+        end)
+    end)
+end
+
+local function CollectSoundNames()
+    local seen, order = {}, {}
+    pcall(function()
+        for _, obj in ipairs(game:GetDescendants()) do
+            if obj:IsA("Sound") and not seen[obj.Name] then
+                seen[obj.Name] = true
+                order[#order + 1] = obj.Name
+            end
+        end
+    end)
+    table.sort(order)
+    return order
+end
+
+local function ReapplyNameMute()
+    UninstallGroup(nameMuteGroup)
+    nameMuteGroup = nil
+    if not next(SelectedMuteNames) then return end
+    nameMuteGroup = Instance.new("SoundGroup")
+    nameMuteGroup.Name = "PulsarMuteNames"
+    nameMuteGroup.Volume = 0
+    nameMuteGroup.Parent = SoundService
+    local group = nameMuteGroup
+    pcall(function()
+        for _, obj in ipairs(game:GetDescendants()) do
+            if obj:IsA("Sound") and SelectedMuteNames[obj.Name] then
+                obj.SoundGroup = group
+            end
+        end
+    end)
+    EnsureMuteWatcher()
+end
+
+SoundMuteGroup:AddToggle("PulsarMuteAllSounds", {
+    Text = "Отключить ВСЕ звуки",
     Default = false,
     Callback = function(on)
         if on then
-            if not muteGroup then
-                muteGroup = Instance.new("SoundGroup")
-                muteGroup.Name = "PulsarMuteGroup"
-                muteGroup.Volume = 0
-                muteGroup.Parent = SoundService
+            if not allMuteGroup then
+                allMuteGroup = Instance.new("SoundGroup")
+                allMuteGroup.Name = "PulsarMuteAll"
+                allMuteGroup.Volume = 0
+                allMuteGroup.Parent = SoundService
             end
-            local group = muteGroup
+            local group = allMuteGroup
             pcall(function()
                 for _, obj in ipairs(game:GetDescendants()) do
                     if obj:IsA("Sound") and obj.SoundGroup == nil then
@@ -944,18 +999,41 @@ SoundsGroup:AddToggle("PulsarMuteSounds", {
                     end
                 end
             end)
-            MuteSoundConn = game.DescendantAdded:Connect(function(obj)
-                if obj:IsA("Sound") and obj.SoundGroup == nil then
-                    obj.SoundGroup = group
-                end
-            end)
+            EnsureMuteWatcher()
         else
-            pcall(PulsarSoundMuteOff)
+            UninstallGroup(allMuteGroup)
+            allMuteGroup = nil
+            if not next(SelectedMuteNames) and MuteSoundConn then
+                MuteSoundConn:Disconnect()
+                MuteSoundConn = nil
+            end
         end
     end,
 })
 
-SoundsGroup:AddLabel("Глушит звуки без своей SoundGroup; новосозданные тоже")
+SoundMuteGroup:AddDropdown("PulsarMuteSpecific", {
+    Values = CollectSoundNames(),
+    Multi = true,
+    AllowNull = true,
+    Searchable = true,
+    Text = "Отключить отдельные звуки",
+    Callback = function(sel)
+        SelectedMuteNames = {}
+        for name in pairs(sel or {}) do
+            SelectedMuteNames[name] = true
+        end
+        ReapplyNameMute()
+    end,
+})
+
+SoundMuteGroup:AddButton({
+    Text = "Обновить список звуков",
+    Func = function()
+        local opts = Library.Options and Library.Options.PulsarMuteSpecific
+        if opts then pcall(function() opts:SetValues(CollectSoundNames()) end) end
+        Library:Notify("Список звуков обновлён")
+    end,
+})
 
 
 -- =====================================================================
