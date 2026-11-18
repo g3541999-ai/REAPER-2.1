@@ -33,9 +33,37 @@ local loaderCorner = Instance.new("UICorner")
 loaderCorner.CornerRadius = UDim.new(0, 10)
 loaderCorner.Parent = loaderFrame
 
+-- ЛОГОТИП PULSAR (снимок пульсара NASA)
+local PulsarLogoId = nil
+pcall(function()
+    if writefile and getcustomasset and game.HttpGet then
+        local logoPath = "pulsar_logo.jpg"
+        local have = false
+        if isfile then
+            have = isfile(logoPath)
+        end
+        if not have then
+            writefile(logoPath, game:HttpGet("https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/PIA21085_-_Pulsar_Artist%27s_Concept.jpg/1280px-PIA21085_-_Pulsar_Artist%27s_Concept.jpg"))
+        end
+        local okId, id = pcall(getcustomasset, logoPath)
+        if okId and id then
+            PulsarLogoId = id
+        end
+    end
+end)
+
+local loaderLogo = Instance.new("ImageLabel")
+loaderLogo.Size = UDim2.fromOffset(80, 80)
+loaderLogo.Position = UDim2.new(0.5, -40, 0, 8)
+loaderLogo.BackgroundTransparency = 1
+if PulsarLogoId then
+    loaderLogo.Image = PulsarLogoId
+end
+loaderLogo.Parent = loaderFrame
+
 local loaderTitle = Instance.new("TextLabel")
 loaderTitle.Size = UDim2.new(1, 0, 0, 30)
-loaderTitle.Position = UDim2.new(0, 0, 0, 12)
+loaderTitle.Position = UDim2.new(0, 0, 0, 92)
 loaderTitle.BackgroundTransparency = 1
 loaderTitle.Text = "PULSAR"
 loaderTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -45,7 +73,7 @@ loaderTitle.Parent = loaderFrame
 
 local loaderVersion = Instance.new("TextLabel")
 loaderVersion.Size = UDim2.new(1, 0, 0, 18)
-loaderVersion.Position = UDim2.new(0, 0, 0, 42)
+loaderVersion.Position = UDim2.new(0, 0, 0, 124)
 loaderVersion.BackgroundTransparency = 1
 loaderVersion.Text = "Версия 2.3"
 loaderVersion.TextColor3 = Color3.fromRGB(160, 160, 170)
@@ -86,7 +114,7 @@ task.spawn(function()
     local introBack = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     pcall(function()
         TweenService:Create(loaderBack, introBack, { BackgroundTransparency = 0.45 }):Play()
-        TweenService:Create(loaderFrame, intro, { Size = UDim2.fromOffset(360, 90) }):Play()
+        TweenService:Create(loaderFrame, intro, { Size = UDim2.fromOffset(360, 170) }):Play()
     end)
     task.wait(0.35)
     pcall(function()
@@ -269,6 +297,8 @@ local Window = Library:CreateWindow({
     SidebarCompactWidth = 56,
     ToggleKeybind = Enum.KeyCode.M,
     ShowMobileButtons = true,
+    SearchbarSize = UDim2.fromScale(0.5, 1),
+    Icon = PulsarLogoId,
 })
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() PulsarLoaderComplete() end)
@@ -794,7 +824,6 @@ StormStart = function(level)
     rain.Name = "PulsarRain"
     rain.Texture = "rbxasset://textures/particles/smoke_main.dds"
     rain.Color = ColorSequence.new(Color3.fromRGB(190, 215, 255))
-    rain.Size = NumberSequence.new(0.1)
     rain.Transparency = NumberSequence.new(0.1)
     rain.LightEmission = 0.6
     rain.Lifetime = NumberRange.new(1.0, 1.4)
@@ -888,10 +917,52 @@ end)
 -- =====================================================================
 local VisualTab = TabObjects["Visual"]
 
+-- SHADERS (верх вкладки Visual)
+local currentShader = "Scarlet Atmosphere"
+local currentLevel = 8
+
+local ShaderGroup = VisualTab:AddLeftGroupbox("Shaders")
+
+ShaderGroup:AddDropdown("SavitarShader", {
+    Values = ShaderOrder,
+    Default = 1,
+    Multi = false,
+    Text = "Шейдер",
+    Callback = function(v)
+        currentShader = v
+        if ShaderState.Active then ApplyShader(currentShader, currentLevel) end
+    end,
+})
+
+ShaderGroup:AddSlider("SavitarIntensity", {
+    Text = "Интенсивность",
+    Default = 8,
+    Min = 0,
+    Max = 10,
+    Rounding = 0,
+    Callback = function(v)
+        currentLevel = v
+        if ShaderState.Active then ApplyShader(currentShader, currentLevel) end
+    end,
+})
+
+ShaderGroup:AddToggle("SavitarShaderOn", {
+    Text = "Включить шейдер",
+    Default = false,
+    Callback = function(on)
+        if on then
+            ApplyShader(currentShader, currentLevel)
+        else
+            RemoveShader()
+        end
+    end,
+})
+
+
 -- =====================================================================
--- ЗВУКИ (блок в вкладке Visual, под шейдерами) — категории Mute
+-- ЗВУКИ (правая колонка вкладки Visual) — категории Mute
 -- =====================================================================
-local SoundMuteCatGroup = VisualTab:AddLeftGroupbox("Звуки")
+local SoundMuteCatGroup = VisualTab:AddRightGroupbox("Звуки")
 local MuteSoundConn = nil
 
 local SoundCategories = {
@@ -1000,9 +1071,96 @@ end
 
 
 -- =====================================================================
+-- ЧИСТИЛЬЩИК ДОЖДЯ — ДВИЖОК (управление — в колонке Graphics)
+-- =====================================================================
+
+local RainPatterns = { "rain", "raindrop", "rainzone" }
+
+local RainCleaner = { GuardConn = nil, SavedClouds = nil }
+
+local function RainMatches(obj)
+    local node = obj
+    local names = {}
+    while node and node ~= game do
+        names[#names + 1] = string.lower(node.Name)
+        node = node.Parent
+    end
+    for _, pattern in ipairs(RainPatterns) do
+        for _, name in ipairs(names) do
+            if pattern == "rain" and string.find(name, "train", 1, true) then
+                continue
+            end
+            if string.find(name, pattern, 1, true) then return true end
+        end
+    end
+    return false
+end
+
+local function RainGetClouds()
+    local terrain = workspace:FindFirstChildOfClass("Terrain")
+    return terrain and terrain:FindFirstChildOfClass("Clouds")
+end
+
+local function RainHideClouds(save)
+    pcall(function()
+        local clouds = RainGetClouds()
+        if not clouds then return end
+        if save then
+            RainCleaner.SavedClouds = { Enabled = clouds.Enabled, Cover = clouds.Cover }
+        end
+        clouds.Enabled = false
+    end)
+end
+
+local function RainRestoreClouds()
+    pcall(function()
+        local clouds = RainGetClouds()
+        local saved = RainCleaner.SavedClouds
+        if clouds and saved then
+            clouds.Enabled = saved.Enabled
+            clouds.Cover = saved.Cover
+        end
+        RainCleaner.SavedClouds = nil
+    end)
+end
+
+local function RainWash()
+    pcall(function() StormStop() end)
+    local containers = { workspace }
+    pcall(function()
+        if workspace.CurrentCamera then
+            containers[#containers + 1] = workspace.CurrentCamera
+        end
+    end)
+    for _, container in ipairs(containers) do
+        pcall(function()
+            for _, obj in ipairs(container:GetDescendants()) do
+                if obj:IsA("ParticleEmitter") and RainMatches(obj) then
+                    pcall(function() obj.Enabled = false end)
+                    pcall(function() obj:Destroy() end)
+                elseif obj:IsA("Clouds") then
+                    pcall(function() obj.Enabled = false end)
+                end
+            end
+        end)
+    end
+end
+
+RainCleanerOff = function()
+    if RainCleaner.GuardConn then
+        pcall(function() RainCleaner.GuardConn:Disconnect() end)
+        RainCleaner.GuardConn = nil
+    end
+    RainRestoreClouds()
+end
+
+
+-- =====================================================================
 -- VISUAL — GRAPHICS (скопировано с Resonance 2.9 — окно Graphics вкладки Visual)
 -- =====================================================================
 do
+
+    local GfxWaterTimeSlice = 0.1
 
     local GfxState = {
         RuntimeConnections = {},
@@ -1430,6 +1588,81 @@ do
         Callback = GfxSetBoostFPSOptions,
     })
 
+    GfxDivider("Thunderstorm")
+
+    Graphics:AddToggle("PulsarNoRain", {
+        Text = "Без дождя",
+        Default = false,
+        Callback = function(on)
+            if on then
+                RainHideClouds(true)
+                RainWash()
+                RainCleaner.GuardConn = game.DescendantAdded:Connect(function(obj)
+                    if obj:IsA("Clouds") then
+                        pcall(function() obj.Enabled = false end)
+                        return
+                    end
+                    if not obj:IsA("ParticleEmitter") then return end
+                    task.defer(function()
+                        pcall(function()
+                            if RainCleaner.GuardConn and RainMatches(obj) then
+                                obj.Enabled = false
+                                obj:Destroy()
+                            end
+                        end)
+                    end)
+                end)
+            else
+                RainCleanerOff()
+            end
+        end,
+    })
+
+    Graphics:AddSlider("PulsarRainDensity", {
+        Text = "Плотность дождя",
+        Default = RainSettings.Density,
+        Min = 0,
+        Max = 200,
+        Rounding = 0,
+        Callback = function(v)
+            RainSettings.Density = v
+            ApplyRainSettings()
+        end,
+    })
+
+    Graphics:AddSlider("PulsarRainSpeed", {
+        Text = "Скорость частиц",
+        Default = RainSettings.Speed,
+        Min = 0,
+        Max = 300,
+        Rounding = 0,
+        Callback = function(v)
+            RainSettings.Speed = v
+            ApplyRainSettings()
+        end,
+    })
+
+    Graphics:AddToggle("PulsarRainCountOn", {
+        Text = "Точное количество",
+        Default = RainSettings.CountOn,
+        Callback = function(on)
+            RainSettings.CountOn = on
+            ApplyRainSettings()
+        end,
+    })
+
+    Graphics:AddSlider("PulsarRainCount", {
+        Text = "Количество частиц/с",
+        Default = RainSettings.Count,
+        Min = 0,
+        Max = 10000,
+        Rounding = 0,
+        Callback = function(v)
+            RainSettings.Count = v
+            ApplyRainSettings()
+        end,
+    })
+
     GfxUnload = function()
         pcall(function() GfxSetParticlesEnabled(false) end)
         pcall(function() GfxSetBoostFPS(false) end)
@@ -1441,205 +1674,6 @@ do
         table.clear(GfxState.RuntimeConnections)
     end
 end
-
--- =====================================================================
--- ЧИСТИЛЬЩИК ДОЖДЯ (Visual — левая колонка)
--- =====================================================================
-local RainGroup = VisualTab:AddLeftGroupbox("Чистильщик дождя")
-
-local RainPatterns = { "rain", "raindrop", "rainzone" }
-
-local RainCleaner = { GuardConn = nil, SavedClouds = nil }
-
-local function RainMatches(obj)
-    local node = obj
-    local names = {}
-    while node and node ~= game do
-        names[#names + 1] = string.lower(node.Name)
-        node = node.Parent
-    end
-    for _, pattern in ipairs(RainPatterns) do
-        for _, name in ipairs(names) do
-            if pattern == "rain" and string.find(name, "train", 1, true) then
-                continue
-            end
-            if string.find(name, pattern, 1, true) then return true end
-        end
-    end
-    return false
-end
-
-local function RainGetClouds()
-    local terrain = workspace:FindFirstChildOfClass("Terrain")
-    return terrain and terrain:FindFirstChildOfClass("Clouds")
-end
-
-local function RainHideClouds(save)
-    pcall(function()
-        local clouds = RainGetClouds()
-        if not clouds then return end
-        if save then
-            RainCleaner.SavedClouds = { Enabled = clouds.Enabled, Cover = clouds.Cover }
-        end
-        clouds.Enabled = false
-    end)
-end
-
-local function RainRestoreClouds()
-    pcall(function()
-        local clouds = RainGetClouds()
-        local saved = RainCleaner.SavedClouds
-        if clouds and saved then
-            clouds.Enabled = saved.Enabled
-            clouds.Cover = saved.Cover
-        end
-        RainCleaner.SavedClouds = nil
-    end)
-end
-
-local function RainWash()
-    pcall(function() StormStop() end)
-    local containers = { workspace }
-    pcall(function()
-        if workspace.CurrentCamera then
-            containers[#containers + 1] = workspace.CurrentCamera
-        end
-    end)
-    for _, container in ipairs(containers) do
-        pcall(function()
-            for _, obj in ipairs(container:GetDescendants()) do
-                if obj:IsA("ParticleEmitter") and RainMatches(obj) then
-                    pcall(function() obj.Enabled = false end)
-                    pcall(function() obj:Destroy() end)
-                elseif obj:IsA("Clouds") then
-                    pcall(function() obj.Enabled = false end)
-                end
-            end
-        end)
-    end
-end
-
-RainCleanerOff = function()
-    if RainCleaner.GuardConn then
-        pcall(function() RainCleaner.GuardConn:Disconnect() end)
-        RainCleaner.GuardConn = nil
-    end
-    RainRestoreClouds()
-end
-
-RainGroup:AddToggle("PulsarNoRain", {
-    Text = "Без дождя",
-    Default = false,
-    Callback = function(on)
-        if on then
-            RainHideClouds(true)
-            RainWash()
-            RainCleaner.GuardConn = game.DescendantAdded:Connect(function(obj)
-                if obj:IsA("Clouds") then
-                    pcall(function() obj.Enabled = false end)
-                    return
-                end
-                if not obj:IsA("ParticleEmitter") then return end
-                task.defer(function()
-                    pcall(function()
-                        if RainCleaner.GuardConn and RainMatches(obj) then
-                            obj.Enabled = false
-                            obj:Destroy()
-                        end
-                    end)
-                end)
-            end)
-        else
-            RainCleanerOff()
-        end
-    end,
-})
-
-RainGroup:AddSlider("PulsarRainDensity", {
-    Text = "Плотность дождя",
-    Default = RainSettings.Density,
-    Min = 0,
-    Max = 200,
-    Rounding = 0,
-    Callback = function(v)
-        RainSettings.Density = v
-        ApplyRainSettings()
-    end,
-})
-
-RainGroup:AddSlider("PulsarRainSpeed", {
-    Text = "Скорость частиц",
-    Default = RainSettings.Speed,
-    Min = 0,
-    Max = 300,
-    Rounding = 0,
-    Callback = function(v)
-        RainSettings.Speed = v
-        ApplyRainSettings()
-    end,
-})
-
-RainGroup:AddToggle("PulsarRainCountOn", {
-    Text = "Точное количество",
-    Default = RainSettings.CountOn,
-    Callback = function(on)
-        RainSettings.CountOn = on
-        ApplyRainSettings()
-    end,
-})
-
-RainGroup:AddSlider("PulsarRainCount", {
-    Text = "Количество частиц/с",
-    Default = RainSettings.Count,
-    Min = 0,
-    Max = 10000,
-    Rounding = 0,
-    Callback = function(v)
-        RainSettings.Count = v
-        ApplyRainSettings()
-    end,
-})
-
--- SHADERS (перенесено под визуал дождя)
-local currentShader = "Scarlet Atmosphere"
-local currentLevel = 8
-
-local ShaderGroup = VisualTab:AddLeftGroupbox("Shaders")
-
-ShaderGroup:AddDropdown("SavitarShader", {
-    Values = ShaderOrder,
-    Default = 1,
-    Multi = false,
-    Text = "Шейдер",
-    Callback = function(v)
-        currentShader = v
-        if ShaderState.Active then ApplyShader(currentShader, currentLevel) end
-    end,
-})
-
-ShaderGroup:AddSlider("SavitarIntensity", {
-    Text = "Интенсивность",
-    Default = 8,
-    Min = 0,
-    Max = 10,
-    Rounding = 0,
-    Callback = function(v)
-        currentLevel = v
-        if ShaderState.Active then ApplyShader(currentShader, currentLevel) end
-    end,
-})
-
-ShaderGroup:AddToggle("SavitarShaderOn", {
-    Text = "Включить шейдер",
-    Default = false,
-    Callback = function(on)
-        if on then
-            ApplyShader(currentShader, currentLevel)
-        else
-            RemoveShader()
-        end
-    end,
-})
 
 -- =====================================================================
 -- ВКЛАДКА PLAYER (функции Resonance, точь-в-точь из модулей)
