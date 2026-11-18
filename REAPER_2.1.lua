@@ -750,8 +750,9 @@ local function ApplyShader(shaderName, level)
         bhSky.SkyboxRt = bhBlack
         bhSky.SkyboxUp = bhBlack
         bhSky.SkyboxDn = bhBlack
+        bhSky.SunTextureId = "rbxassetid://5436396975"
         bhSky.CelestialBodiesShown = true
-        bhSky.SunAngularSize = 0
+        bhSky.SunAngularSize = 40
         bhSky.MoonAngularSize = 0
         bhSky.StarCount = 1500
         ActiveEffects[#ActiveEffects+1] = bhSky
@@ -768,7 +769,7 @@ local function ApplyShader(shaderName, level)
         pSky.SkyboxUp = pBlack
         pSky.SkyboxDn = pBlack
         pSky.CelestialBodiesShown = true
-        pSky.SunAngularSize = 7
+        pSky.SunAngularSize = 25
         pSky.MoonAngularSize = 0
         pSky.StarCount = 3000
         pSky.SunTextureId = "rbxasset://textures/particles/sparkles_main.dds"
@@ -779,6 +780,53 @@ local function ApplyShader(shaderName, level)
         pBloom.Size = 30
         pBloom.Intensity = 1
         ActiveEffects[#ActiveEffects+1] = pBloom
+
+        local jetPart = Instance.new("Part")
+        jetPart.Name = "SavitarPulsarJets"
+        jetPart.Anchored = true
+        jetPart.CanCollide = false
+        jetPart.CanQuery = false
+        jetPart.Transparency = 1
+        jetPart.Size = Vector3.new(0.2, 0.2, 0.2)
+        jetPart.Parent = workspace
+        local jA0 = Instance.new("Attachment")
+        jA0.Name = "JetTop"
+        jA0.Position = Vector3.new(0, 5000, 0)
+        jA0.Parent = jetPart
+        local jA1 = Instance.new("Attachment")
+        jA1.Name = "JetBottom"
+        jA1.Position = Vector3.new(0, -5000, 0)
+        jA1.Parent = jetPart
+        local jAC = Instance.new("Attachment")
+        jAC.Name = "JetCenter"
+        jAC.Parent = jetPart
+        local jetColor = ColorSequence.new(Color3.fromRGB(150, 190, 255), Color3.fromRGB(255, 255, 255))
+        local jetTrans = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.25),
+            NumberSequenceKeypoint.new(0.5, 0.5),
+            NumberSequenceKeypoint.new(1, 1),
+        })
+        local jets = {}
+        for _, att in ipairs({ jA0, jA1 }) do
+            local beam = Instance.new("Beam")
+            beam.Name = "SavitarPulsarJet"
+            beam.Attachment0 = jAC
+            beam.Attachment1 = att
+            beam.Width0 = 40
+            beam.Width1 = 10
+            beam.Color = jetColor
+            beam.Transparency = jetTrans
+            beam.Brightness = 3
+            beam.LightEmission = 1
+            beam.LightInfluence = 0
+            beam.Segments = 1
+            beam.Parent = jetPart
+            ActiveEffects[#ActiveEffects+1] = beam
+            jets[#jets + 1] = beam
+        end
+        ActiveEffects[#ActiveEffects+1] = jetPart
+        ShaderState.PulsarJets = { Part = jetPart, Beams = jets }
+
         if not ShaderState.PulsarHooked then
             ShaderState.PulsarHooked = true
             AddUpdater(function()
@@ -789,6 +837,17 @@ local function ApplyShader(shaderName, level)
                 local pre = ShaderPresets["Пульсар"]
                 b.Intensity = (0.5 + 2.5 * ph * ph) * t2
                 Lighting.Brightness = lerpNum(Original.Lighting.Brightness, pre.Lighting.Brightness, t2) * (0.95 + 0.45 * ph)
+                local jets = ShaderState.PulsarJets
+                if jets and jets.Part and jets.Part.Parent then
+                    local cam = workspace.CurrentCamera
+                    if cam then
+                        local pos = cam.CFrame.Position + cam.CFrame.LookVector * 3500
+                        jets.Part.CFrame = CFrame.lookAt(pos, pos + Vector3.new(0, 1, 0))
+                    end
+                    for _, beam in ipairs(jets.Beams) do
+                        beam.Brightness = (1.5 + 1.5 * ph) * t2
+                    end
+                end
             end)
         end
     end
