@@ -75,6 +75,84 @@ function PulsarLoaderComplete()
     pcall(function() loaderGui:Destroy() end)
 end
 
+-- =====================================================================
+-- ОКНО FPS | ПИНГ (верх справа, темп как у Резонанса: раз в секунду)
+-- =====================================================================
+local StatsGui = Instance.new("ScreenGui")
+StatsGui.Name = "PulsarStats"
+StatsGui.ResetOnSpawn = false
+StatsGui.DisplayOrder = 9998
+StatsGui.IgnoreGuiInset = true
+
+local StatsFrame = Instance.new("Frame")
+StatsFrame.AnchorPoint = Vector2.new(1, 0)
+StatsFrame.Position = UDim2.new(1, -10, 0, 10)
+StatsFrame.Size = UDim2.fromOffset(220, 46)
+StatsFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+StatsFrame.BorderSizePixel = 0
+StatsFrame.Parent = StatsGui
+
+local StatsCorner = Instance.new("UICorner")
+StatsCorner.CornerRadius = UDim.new(0, 8)
+StatsCorner.Parent = StatsFrame
+
+local StatsStroke = Instance.new("UIStroke")
+StatsStroke.Color = Color3.fromRGB(125, 85, 255)
+StatsStroke.Thickness = 1
+StatsStroke.Parent = StatsFrame
+
+local StatsTitle = Instance.new("TextLabel")
+StatsTitle.Size = UDim2.new(1, -16, 0, 20)
+StatsTitle.Position = UDim2.fromOffset(8, 2)
+StatsTitle.BackgroundTransparency = 1
+StatsTitle.Text = "PULSAR 2.3"
+StatsTitle.TextColor3 = Color3.fromRGB(170, 140, 255)
+StatsTitle.Font = Enum.Font.GothamBold
+StatsTitle.TextSize = 13
+StatsTitle.TextXAlignment = Enum.TextXAlignment.Left
+StatsTitle.Parent = StatsFrame
+
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Size = UDim2.new(1, -16, 0, 18)
+StatsLabel.Position = UDim2.fromOffset(8, 24)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.Text = "FPS: 0 | Пинг: 0 мс"
+StatsLabel.TextColor3 = Color3.new(1, 1, 1)
+StatsLabel.Font = Enum.Font.Gotham
+StatsLabel.TextSize = 13
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatsLabel.Parent = StatsFrame
+
+if not pcall(function() StatsGui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end) then
+    StatsGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
+task.spawn(function()
+    local RunServiceS = game:GetService("RunService")
+    local StatsService = game:GetService("Stats")
+    local frames = 0
+    local acc = 0
+    local ping = 0
+    local conn = RunServiceS.Heartbeat:Connect(function(dt)
+        frames = frames + 1
+        acc = acc + dt
+    end)
+    while StatsGui.Parent do
+        task.wait(1)
+        local fps = 0
+        if acc > 0 then fps = math.floor(frames / acc + 0.5) end
+        pcall(function()
+            ping = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+        end)
+        pcall(function()
+            StatsLabel.Text = "FPS: " .. fps .. " | Пинг: " .. math.floor(ping) .. " мс"
+        end)
+        frames = 0
+        acc = 0
+    end
+    pcall(function() conn:Disconnect() end)
+end)
+
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
 
 pcall(function()
