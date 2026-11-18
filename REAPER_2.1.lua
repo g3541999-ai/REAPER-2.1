@@ -1,6 +1,5 @@
 -- ==========================================
 -- PULSAR 2.3 — OBSIDIAN EDITION + SAVITAR SHADERS
--- Запасная копия
 -- ==========================================
 
 -- =====================================================================
@@ -553,15 +552,15 @@ local ShaderPresets = {
         Atmosphere={Density=0.3,Offset=0.2,Haze=1.6,Glare=0.05,Color=Color3.fromRGB(90,95,115),Decay=Color3.fromRGB(80,85,105)},
     },
     ["Чёрная дыра"] = {
-        Lighting = { Brightness=1.7, ClockTime=0, FogEnd=2500, FogStart=0, FogColor=Color3.fromRGB(40,38,55), ExposureCompensation=0.22, ShadowSoftness=0.3, Ambient=Color3.fromRGB(48,46,70), ColorShift_Top=Color3.fromRGB(120,90,190), OutdoorAmbient=Color3.fromRGB(70,62,110) },
+        Lighting = { Brightness=1.7, ClockTime=0, FogEnd=20000, FogStart=0, FogColor=Color3.fromRGB(60,58,80), ExposureCompensation=0.3, ShadowSoftness=0.3, Ambient=Color3.fromRGB(48,46,70), ColorShift_Top=Color3.fromRGB(120,90,190), OutdoorAmbient=Color3.fromRGB(70,62,110) },
         Bloom={Intensity=0.9,Threshold=0.7,Size=50}, Blur={Size=0.2},
-        ColorCorrection={Saturation=-0.1,Contrast=0.22,TintColor=Color3.fromRGB(225,218,255)},
-        Atmosphere={Density=0.35,Offset=0.1,Haze=1.6,Glare=0,Color=Color3.fromRGB(90,70,150),Decay=Color3.fromRGB(40,28,80)},
+        ColorCorrection={Saturation=-0.1,Contrast=0.22,TintColor=Color3.fromRGB(240,236,255)},
+        Atmosphere={Density=0.12,Offset=0.1,Haze=0.5,Glare=0,Color=Color3.fromRGB(90,70,150),Decay=Color3.fromRGB(40,28,80)},
     },
     ["Пульсар"] = {
-        Lighting = { Brightness=1.45, ClockTime=0, FogEnd=5000, ExposureCompensation=-0.05, ShadowSoftness=0.55, Ambient=Color3.fromRGB(52,56,74), ColorShift_Top=Color3.fromRGB(140,165,255), OutdoorAmbient=Color3.fromRGB(62,72,110) },
+        Lighting = { Brightness=1.45, ClockTime=13.5, FogEnd=20000, ExposureCompensation=-0.05, ShadowSoftness=0.55, Ambient=Color3.fromRGB(52,56,74), ColorShift_Top=Color3.fromRGB(140,165,255), OutdoorAmbient=Color3.fromRGB(62,72,110) },
         ColorCorrection={Brightness=0.02,Saturation=-0.08,Contrast=0.22,TintColor=Color3.fromRGB(220,228,255)},
-        Atmosphere={Density=0.3,Offset=0.15,Haze=1.3,Glare=0.1,Color=Color3.fromRGB(110,125,180),Decay=Color3.fromRGB(60,68,100)},
+        Atmosphere={Density=0.12,Offset=0.15,Haze=0.5,Glare=0.1,Color=Color3.fromRGB(110,125,180),Decay=Color3.fromRGB(60,68,100)},
     },
 }
 
@@ -751,8 +750,10 @@ local function ApplyShader(shaderName, level)
         bhSky.SkyboxRt = bhBlack
         bhSky.SkyboxUp = bhBlack
         bhSky.SkyboxDn = bhBlack
-        bhSky.CelestialBodiesShown = false
-        bhSky.StarCount = 0
+        bhSky.CelestialBodiesShown = true
+        bhSky.SunAngularSize = 0
+        bhSky.MoonAngularSize = 0
+        bhSky.StarCount = 1500
         ActiveEffects[#ActiveEffects+1] = bhSky
     end
 
@@ -766,8 +767,11 @@ local function ApplyShader(shaderName, level)
         pSky.SkyboxRt = pBlack
         pSky.SkyboxUp = pBlack
         pSky.SkyboxDn = pBlack
-        pSky.CelestialBodiesShown = false
+        pSky.CelestialBodiesShown = true
+        pSky.SunAngularSize = 7
+        pSky.MoonAngularSize = 0
         pSky.StarCount = 3000
+        pSky.SunTextureId = "rbxasset://textures/particles/sparkles_main.dds"
         ActiveEffects[#ActiveEffects+1] = pSky
         local pBloom = Instance.new("BloomEffect", Lighting)
         pBloom.Name = "SavitarPulsarBloom"
@@ -820,18 +824,6 @@ local RainSettings = { Density = 40, Speed = 100, Size = 0.1, CountOn = false, C
 local function RainRateCalc(level)
     if RainSettings.CountOn then return RainSettings.Count end
     return RainSettings.Density * level
-end
-
-local function ApplyRainSettings()
-    local rain = Storm.Rain
-    if rain and rain.Parent then
-        local level = tonumber(ShaderState.Level) or 8
-        pcall(function()
-            rain.Rate = RainRateCalc(level)
-            rain.Speed = NumberRange.new(math.max(RainSettings.Speed - 10, 0), RainSettings.Speed + 10)
-            rain.Size = NumberSequence.new(RainSettings.Size)
-        end)
-    end
 end
 
 StormStop = function()
@@ -996,7 +988,6 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
     end,
 })
 
-
 -- =====================================================================
 -- ЗВУКИ (правая колонка вкладки Visual) — категории Mute
 -- =====================================================================
@@ -1134,7 +1125,6 @@ for _, cat in ipairs(SoundCategories) do
         end,
     })
 end
-
 
 -- =====================================================================
 -- VISUAL — GRAPHICS (скопировано с Resonance 2.9 — окно Graphics вкладки Visual)
@@ -1507,7 +1497,7 @@ do
     if not ParticlesBox then
         ParticlesBox = Graphics
         pcall(function()
-            Library:Notify("Particles: зависимый блок не поддержан, элементы добавлены напрямую")
+            Library:Notify("Particles: зависимый блок не поддерждан, элементы добавлены напрямую")
         end)
     end
 
@@ -1525,7 +1515,6 @@ do
                 end
             end,
         })
-
 
         ParticlesBox:AddSlider("PDensity", {
             Text = "Density (Count)",
