@@ -1430,7 +1430,7 @@ do
         ["Sparkles"] = "rbxasset://textures/particles/sparkles_main.dds",
         ["Fire"] = "rbxasset://textures/particles/fire_main.dds",
         ["Smoke"] = "rbxasset://textures/particles/smoke_main.dds",
-        ["Sparks"] = "rbxassetid://244359828",
+        ["Sparks"] = "rbxassetid://6711256324",
         ["Star"] = "rbxassetid://6772783963",
         ["Star Small"] = "rbxassetid://5860841663",
         ["Heart"] = "rbxassetid://5857851618",
@@ -1439,10 +1439,8 @@ do
         ["Paw"] = "rbxassetid://6803084085",
         ["Lightning"] = "rbxassetid://6772766551",
         ["Explosion"] = "rbxassetid://5833235272",
-        ["Moon"] = "rbxassetid://17007876976",
-        ["Skull"] = "rbxassetid://73203132374166",
     }
-    local ParticleTextureOrder = { "Dot", "Sparkles", "Fire", "Smoke", "Sparks", "Star", "Star Small", "Heart", "Diamond", "Leaf", "Paw", "Lightning", "Explosion", "Moon", "Skull" }
+    local ParticleTextureOrder = { "Dot", "Sparkles", "Fire", "Smoke", "Sparks", "Star", "Star Small", "Heart", "Diamond", "Leaf", "Paw", "Lightning", "Explosion" }
 
     local ParticlesBox = GfxDepbox({ { Library.Options.ParticlesT, true } })
 
