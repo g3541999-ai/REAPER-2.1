@@ -125,7 +125,7 @@ function PulsarLoaderComplete()
     task.wait(0.4)
     if not loaderGui or typeof(loaderGui) ~= "Instance" then return end
     pcall(function()
-        local out = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        local out = TweenInfo.new(0.3, Enum.EasingStyle.Qual, Enum.EasingDirection.In)
         TweenService:Create(loaderBack, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderFrame, out, { Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderBar, out, { BackgroundTransparency = 1 }):Play()
@@ -916,15 +916,16 @@ local SoundCategories = {
 }
 
 local function MatchesPatterns(sound, patterns)
-    local lower1 = string.lower(sound.Name)
-    local p = sound.Parent
-    local lower2 = p and string.lower(p.Name) or nil
-    local gp = p and p.Parent
-    local lower3 = gp and string.lower(gp.Name) or nil
+    local node = sound
+    local names = {}
+    while node and node ~= game do
+        names[#names + 1] = string.lower(node.Name)
+        node = node.Parent
+    end
     for _, pattern in ipairs(patterns) do
-        if string.find(lower1, pattern, 1, true) then return true end
-        if lower2 and string.find(lower2, pattern, 1, true) then return true end
-        if lower3 and string.find(lower3, pattern, 1, true) then return true end
+        for _, name in ipairs(names) do
+            if string.find(name, pattern, 1, true) then return true end
+        end
     end
     return false
 end
@@ -1351,26 +1352,5 @@ PlayerRight:AddButton({
         if mouse and mouse.Hit then
             Res_teleportTo(mouse.Hit + Vector3.new(0, 3, 0))
         end
-    end,
-})
-
-
--- =====================================================================
--- ВКЛАДКА SETTINGS (Interface)
--- =====================================================================
-local SettingsGroup = TabObjects["Settings"]:AddLeftGroupbox("Interface")
-
-SettingsGroup:AddToggle("HideTabText", {
-    Text = "Скрывать текст вкладок",
-    Default = true,
-    Callback = function(on)
-        local ok = pcall(function() Window:SetSidebarCompacted(on) end)
-        if not ok then
-            ok = pcall(function()
-                Window.SidebarCompacted = on
-                if Window.UpdateCompacting then Window:UpdateCompacting() end
-            end)
-        end
-        Library:Notify(ok and (on and "Текст вкладок скрыт" or "Текст вкладок показан") or "Не поддерживается этой версией Obsidian")
     end,
 })
