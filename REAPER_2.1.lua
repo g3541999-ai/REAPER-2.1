@@ -33,37 +33,9 @@ local loaderCorner = Instance.new("UICorner")
 loaderCorner.CornerRadius = UDim.new(0, 10)
 loaderCorner.Parent = loaderFrame
 
--- ЛОГОТИП PULSAR (снимок пульсара NASA)
-local PulsarLogoId = nil
-pcall(function()
-    if writefile and getcustomasset and game.HttpGet then
-        local logoPath = "pulsar_logo.jpg"
-        local have = false
-        if isfile then
-            have = isfile(logoPath)
-        end
-        if not have then
-            writefile(logoPath, game:HttpGet("https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/PIA21085_-_Pulsar_Artist%27s_Concept.jpg/1280px-PIA21085_-_Pulsar_Artist%27s_Concept.jpg"))
-        end
-        local okId, id = pcall(getcustomasset, logoPath)
-        if okId and id then
-            PulsarLogoId = id
-        end
-    end
-end)
-
-local loaderLogo = Instance.new("ImageLabel")
-loaderLogo.Size = UDim2.fromOffset(80, 80)
-loaderLogo.Position = UDim2.new(0.5, -40, 0, 8)
-loaderLogo.BackgroundTransparency = 1
-if PulsarLogoId then
-    loaderLogo.Image = PulsarLogoId
-end
-loaderLogo.Parent = loaderFrame
-
 local loaderTitle = Instance.new("TextLabel")
 loaderTitle.Size = UDim2.new(1, 0, 0, 30)
-loaderTitle.Position = UDim2.new(0, 0, 0, 92)
+loaderTitle.Position = UDim2.new(0, 0, 0, 12)
 loaderTitle.BackgroundTransparency = 1
 loaderTitle.Text = "PULSAR"
 loaderTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -73,7 +45,7 @@ loaderTitle.Parent = loaderFrame
 
 local loaderVersion = Instance.new("TextLabel")
 loaderVersion.Size = UDim2.new(1, 0, 0, 18)
-loaderVersion.Position = UDim2.new(0, 0, 0, 124)
+loaderVersion.Position = UDim2.new(0, 0, 0, 42)
 loaderVersion.BackgroundTransparency = 1
 loaderVersion.Text = "Версия 2.3"
 loaderVersion.TextColor3 = Color3.fromRGB(160, 160, 170)
@@ -114,7 +86,7 @@ task.spawn(function()
     local introBack = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     pcall(function()
         TweenService:Create(loaderBack, introBack, { BackgroundTransparency = 0.45 }):Play()
-        TweenService:Create(loaderFrame, intro, { Size = UDim2.fromOffset(360, 170) }):Play()
+        TweenService:Create(loaderFrame, intro, { Size = UDim2.fromOffset(360, 90) }):Play()
     end)
     task.wait(0.35)
     pcall(function()
@@ -167,7 +139,6 @@ function PulsarLoaderComplete()
         TweenService:Create(loaderFrame, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderTitle, out, { TextTransparency = 1 }):Play()
         TweenService:Create(loaderVersion, out, { TextTransparency = 1 }):Play()
-        TweenService:Create(loaderLogo, out, { ImageTransparency = 1 }):Play()
         TweenService:Create(loaderBar, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderFill, out, { BackgroundTransparency = 1 }):Play()
     end)
@@ -309,7 +280,6 @@ local Window = Library:CreateWindow({
     ToggleKeybind = Enum.KeyCode.M,
     ShowMobileButtons = true,
     SearchbarSize = UDim2.fromScale(0.5, 1),
-    Icon = PulsarLogoId,
 })
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() PulsarLoaderComplete() end)
