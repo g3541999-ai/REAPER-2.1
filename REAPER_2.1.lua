@@ -345,19 +345,38 @@ task.spawn(function()
         end
         return nil
     end
-    for _ = 1, 30 do
+    local function SquareSwitch(sw)
+        sw.Frame:SetAttribute("PulsarSquare", true)
+        sw.Ball.Visible = false
+        sw.Corner.CornerRadius = UDim.new(0, 0)
+        sw.Frame.Size = UDim2.fromOffset(18, 18)
+    end
+    pcall(function()
+        Library:GiveSignal(root.DescendantAdded:Connect(function(d)
+            task.defer(function()
+                local sw = FindSwitchParts(d)
+                if sw and not sw.Frame:GetAttribute("PulsarSquare") then
+                    SquareSwitch(sw)
+                end
+            end)
+        end))
+    end)
+    local emptyPasses = 0
+    for _ = 1, 40 do
         local processed = 0
         for _, d in ipairs(root:GetDescendants()) do
             local sw = FindSwitchParts(d)
             if sw and not sw.Frame:GetAttribute("PulsarSquare") then
-                sw.Frame:SetAttribute("PulsarSquare", true)
-                sw.Ball.Visible = false
-                sw.Corner.CornerRadius = UDim.new(0, 0)
-                sw.Frame.Size = UDim2.fromOffset(18, 18)
+                SquareSwitch(sw)
                 processed = processed + 1
             end
         end
-        if processed == 0 then break end
+        if processed == 0 then
+            emptyPasses = emptyPasses + 1
+            if emptyPasses >= 3 then break end
+        else
+            emptyPasses = 0
+        end
         task.wait(0.3)
     end
 end)
