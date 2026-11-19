@@ -834,7 +834,7 @@ local function RemoveShader()
 end
 
 -- =====================================================================
--- ЗВУКОВОЙ СЕРВИС (используется Mute-категориями ниже)
+-- ЗВУКОВЫЙ СЕРВИС (используется Mute-категориями ниже)
 -- =====================================================================
 local SoundService = game:GetService("SoundService")
 
@@ -865,27 +865,17 @@ end)
 -- =====================================================================
 -- ВКЛАДКА MUSIC — плеер с сохранёнными треками (публичные аудио Roblox)
 -- =====================================================================
-local MusicTracks = {
-    ["Raining Tacos"] = 142376088,
-    ["Phonk't Out"] = 14145625743,
-    ["RAVE OR DIE"] = 120127258775778,
-    ["Infectious"] = 79451196298919,
-    ["Stadium Rave"] = 1846368080,
-    ["Happy Song"] = 1843404009,
-    ["A Little Lo-Fi"] = 135783618859432,
-    ["Wind Chimes"] = 134467328946090,
-    ["Time To Relax"] = 9044702906,
-    ["Speed Metal Overture"] = 9042370693,
-    ["Abyssal Plain"] = 9042861406,
-    ["Tear It Up"] = 1842763322,
-}
-local MusicOrder = {
-    "Raining Tacos", "Phonk't Out", "RAVE OR DIE", "Infectious",
-    "Stadium Rave", "Happy Song", "A Little Lo-Fi", "Wind Chimes",
-    "Time To Relax", "Speed Metal Overture", "Abyssal Plain", "Tear It Up",
-}
+local MusicTracks = {}
 
-local MusicPlayer = { Sound = nil, Track = MusicOrder[1], Volume = 50 }
+local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false }
+local MusicPlayBtn = nil
+local MusicPlay = nil
+
+local function SetPlayBtnText(text)
+    if MusicPlayBtn then
+        pcall(function() MusicPlayBtn:SetText(text) end)
+    end
+end
 
 local function MusicStop()
     if MusicPlayer.Sound then
@@ -893,13 +883,54 @@ local function MusicStop()
         pcall(function() MusicPlayer.Sound:Destroy() end)
         MusicPlayer.Sound = nil
     end
+    MusicPlayer.Paused = false
+    SetPlayBtnText("▶")
 end
 PulsarMusicStop = MusicStop
 
-local function MusicPlay()
+local function MusicTogglePlay()
+    local s = MusicPlayer.Sound
+    if s then
+        if MusicPlayer.Paused then
+            pcall(function() s:Resume() end)
+            MusicPlayer.Paused = false
+            SetPlayBtnText("⏸")
+        else
+            pcall(function() s:Pause() end)
+            MusicPlayer.Paused = true
+            SetPlayBtnText("▶")
+        end
+        return
+    end
+    MusicPlay()
+end
+
+local function MusicSkip(dir)
+    local order = {}
+    for name in pairs(MusicTracks) do
+        order[#order + 1] = name
+    end
+    if #order == 0 then
+        Library:Notify("Плейлист пуст — треки добавим позже")
+        return
+    end
+    table.sort(order)
+    local idx = 1
+    for i, name in ipairs(order) do
+        if name == MusicPlayer.Track then idx = i break end
+    end
+    idx = ((idx - 1 + dir) % #order) + 1
+    MusicPlayer.Track = order[idx]
+    MusicPlay()
+end
+
+function MusicPlay()
     MusicStop()
     local id = MusicTracks[MusicPlayer.Track]
-    if not id then return end
+    if not id then
+        Library:Notify("Плейлист пуст — треки добавим позже")
+        return
+    end
     local s = Instance.new("Sound")
     s.Name = "PulsarMusic"
     s.SoundId = "rbxassetid://" .. id
@@ -915,20 +946,12 @@ local function MusicPlay()
         return
     end
     MusicPlayer.Sound = s
+    MusicPlayer.Paused = false
     s:Play()
+    SetPlayBtnText("⏸")
 end
 
 local MusicGroup = TabObjects["Music"]:AddLeftGroupbox("Плеер")
-
-MusicGroup:AddDropdown("PulsarMusicTrack", {
-    Values = MusicOrder,
-    Default = 1,
-    Multi = false,
-    Text = "Трек",
-    Callback = function(v)
-        MusicPlayer.Track = v
-    end,
-})
 
 MusicGroup:AddSlider("PulsarMusicVolume", {
     Text = "Громкость (%)",
@@ -944,15 +967,15 @@ MusicGroup:AddSlider("PulsarMusicVolume", {
     end,
 })
 
-MusicGroup:AddButton({
-    Text = "Play",
-    Func = MusicPlay,
-})
+local PlayBtn = MusicGroup:AddButton({ Text = "▶", Func = MusicTogglePlay })
+MusicPlayBtn = PlayBtn
+local PrevBtn = PlayBtn:AddButton({ Text = "⏮", Func = function() MusicSkip(-1) end })
+local NextBtn = PlayBtn:AddButton({ Text = "⏭", Func = function() MusicSkip(1) end })
+PlayBtn:AddButton({ Text = "⏹", Func = function() MusicStop() end })
 
-MusicGroup:AddButton({
-    Text = "Stop",
-    Func = MusicStop,
-})
+PrevBtn.Base.LayoutOrder = 0
+PlayBtn.Base.LayoutOrder = 1
+NextBtn.Base.LayoutOrder = 2
 
 -- =====================================================================
 -- ВКЛАДКА VISUAL (управление через Obsidian)
