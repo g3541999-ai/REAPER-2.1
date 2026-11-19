@@ -409,7 +409,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 13")
-StatsGroup:AddLabel("Шейдеров: 15")
+StatsGroup:AddLabel("Шейдеров: 27")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -700,9 +700,93 @@ local ShaderPresets = {
         SunRays={Intensity=0.06,Spread=0.7},
         Atmosphere={Density=0.4,Offset=0.18,Haze=2.0,Glare=0.25,Color=Color3.fromRGB(160,255,110),Decay=Color3.fromRGB(85,130,60)},
     },
+    ["Nightmare"] = {
+        Lighting = { Brightness=1.2, ClockTime=0, FogEnd=1500, FogStart=0, FogColor=Color3.fromRGB(60,10,14), ExposureCompensation=-0.05, ShadowSoftness=0.8, Ambient=Color3.fromRGB(35,12,16), OutdoorAmbient=Color3.fromRGB(70,25,30), ColorShift_Bottom=Color3.fromRGB(20,0,5), ColorShift_Top=Color3.fromRGB(140,20,30) },
+        Bloom={Intensity=0.9,Threshold=0.6,Size=55}, Blur={Size=0.5},
+        ColorCorrection={Brightness=-0.05,Saturation=-0.1,Contrast=0.55,TintColor=Color3.fromRGB(255,200,205)},
+        SunRays={Intensity=0.04,Spread=0.6},
+        Atmosphere={Density=0.45,Offset=0.18,Haze=2.2,Glare=0.2,Color=Color3.fromRGB(180,60,70),Decay=Color3.fromRGB(80,15,25)},
+    },
+    ["Demon Domain"] = {
+        Lighting = { Brightness=1.5, ClockTime=18.9, FogEnd=2000, FogStart=0, FogColor=Color3.fromRGB(90,15,10), ExposureCompensation=0.06, ShadowSoftness=0.55, Ambient=Color3.fromRGB(60,20,15), OutdoorAmbient=Color3.fromRGB(120,40,30), ColorShift_Bottom=Color3.fromRGB(40,5,0), ColorShift_Top=Color3.fromRGB(255,60,30) },
+        Bloom={Intensity=0.85,Threshold=0.65,Size=60},
+        ColorCorrection={Brightness=0.01,Saturation=0.25,Contrast=0.4,TintColor=Color3.fromRGB(255,200,185)},
+        SunRays={Intensity=0.2,Spread=0.85},
+        Atmosphere={Density=0.4,Offset=0.2,Haze=2.0,Glare=0.35,Color=Color3.fromRGB(255,90,60),Decay=Color3.fromRGB(110,25,15)},
+    },
+    ["Cursed Forest"] = {
+        Lighting = { Brightness=1.1, ClockTime=6.2, FogEnd=900, FogStart=0, FogColor=Color3.fromRGB(40,60,35), ExposureCompensation=-0.02, ShadowSoftness=0.75, Ambient=Color3.fromRGB(30,45,25), OutdoorAmbient=Color3.fromRGB(65,85,60), ColorShift_Bottom=Color3.fromRGB(15,30,12), ColorShift_Top=Color3.fromRGB(110,150,80) },
+        Bloom={Intensity=0.5,Threshold=0.7,Size=45},
+        ColorCorrection={Brightness=-0.03,Saturation=-0.05,Contrast=0.35,TintColor=Color3.fromRGB(220,245,205)},
+        SunRays={Intensity=0.05,Spread=0.6},
+        Atmosphere={Density=0.55,Offset=0.18,Haze=2.6,Glare=0.15,Color=Color3.fromRGB(120,160,100),Decay=Color3.fromRGB(50,75,45)},
+    },
+    ["Graveyard Fog"] = {
+        Lighting = { Brightness=1.3, ClockTime=5.8, FogEnd=500, FogStart=0, FogColor=Color3.fromRGB(150,155,165), ExposureCompensation=0, ShadowSoftness=0.8, Ambient=Color3.fromRGB(70,72,80), OutdoorAmbient=Color3.fromRGB(125,130,140), ColorShift_Bottom=Color3.fromRGB(90,95,105), ColorShift_Top=Color3.fromRGB(190,195,205) },
+        Bloom={Intensity=0.3,Threshold=0.8,Size=38},
+        ColorCorrection={Brightness=0,Saturation=-0.3,Contrast=0.25,TintColor=Color3.fromRGB(230,235,245)},
+        SunRays={Intensity=0.03,Spread=0.55},
+        Atmosphere={Density=0.7,Offset=0.15,Haze=3.0,Glare=0.15,Color=Color3.fromRGB(200,205,215),Decay=Color3.fromRGB(120,125,140)},
+    },
+    ["Slender"] = {
+        Lighting = { Brightness=1.6, ClockTime=7, FogEnd=300, FogStart=0, FogColor=Color3.fromRGB(200,200,200), ExposureCompensation=0.05, ShadowSoftness=0.9, Ambient=Color3.fromRGB(140,140,140), OutdoorAmbient=Color3.fromRGB(175,175,175), ColorShift_Bottom=Color3.fromRGB(150,150,150), ColorShift_Top=Color3.fromRGB(215,215,215) },
+        Bloom={Intensity=0.25,Threshold=0.9,Size=30},
+        ColorCorrection={Brightness=0.03,Saturation=-0.55,Contrast=0.15,TintColor=Color3.fromRGB(235,235,235)},
+        SunRays={Intensity=0,Spread=0.5},
+        Atmosphere={Density=0.85,Offset=0.1,Haze=3.5,Glare=0.1,Color=Color3.fromRGB(210,210,210),Decay=Color3.fromRGB(160,160,160)},
+    },
+    ["Dead Silence"] = {
+        Lighting = { Brightness=1.0, ClockTime=19.8, FogEnd=4000, ExposureCompensation=0, ShadowSoftness=0.7, Ambient=Color3.fromRGB(55,58,65), OutdoorAmbient=Color3.fromRGB(105,110,120), ColorShift_Top=Color3.fromRGB(150,160,180) },
+        Bloom={Intensity=0.4,Threshold=0.8,Size=35},
+        ColorCorrection={Brightness=0,Saturation=-0.6,Contrast=0.3,TintColor=Color3.fromRGB(220,228,240)},
+        SunRays={Intensity=0.02,Spread=0.6},
+        Atmosphere={Density=0.35,Offset=0.15,Haze=1.5,Glare=0.15,Color=Color3.fromRGB(185,195,215),Decay=Color3.fromRGB(95,105,125)},
+    },
+    ["Possession"] = {
+        Lighting = { Brightness=1.7, ClockTime=16.9, FogEnd=2500, FogColor=Color3.fromRGB(120,125,70), ExposureCompensation=0.02, ShadowSoftness=0.6, Ambient=Color3.fromRGB(70,72,40), OutdoorAmbient=Color3.fromRGB(130,135,85), ColorShift_Bottom=Color3.fromRGB(55,60,25), ColorShift_Top=Color3.fromRGB(200,210,120) },
+        Bloom={Intensity=0.55,Threshold=0.72,Size=48},
+        ColorCorrection={Brightness=0.02,Saturation=0.1,Contrast=0.3,TintColor=Color3.fromRGB(235,240,190)},
+        SunRays={Intensity=0.08,Spread=0.7},
+        Atmosphere={Density=0.38,Offset=0.16,Haze=1.9,Glare=0.25,Color=Color3.fromRGB(190,200,120),Decay=Color3.fromRGB(95,105,55)},
+    },
+    ["Dark Ritual"] = {
+        Lighting = { Brightness=1.3, ClockTime=0.5, FogEnd=1800, FogColor=Color3.fromRGB(40,15,60), ExposureCompensation=0.04, ShadowSoftness=0.7, Ambient=Color3.fromRGB(30,12,45), OutdoorAmbient=Color3.fromRGB(60,30,90), ColorShift_Bottom=Color3.fromRGB(20,5,35), ColorShift_Top=Color3.fromRGB(120,50,200) },
+        Bloom={Intensity=0.9,Threshold=0.65,Size=58},
+        ColorCorrection={Brightness=-0.03,Saturation=0.15,Contrast=0.45,TintColor=Color3.fromRGB(235,215,255)},
+        SunRays={Intensity=0.06,Spread=0.7},
+        Atmosphere={Density=0.45,Offset=0.17,Haze=2.1,Glare=0.3,Color=Color3.fromRGB(160,90,255),Decay=Color3.fromRGB(70,30,120)},
+    },
+    ["Asylum"] = {
+        Lighting = { Brightness=1.4, ClockTime=14, FogEnd=3500, FogColor=Color3.fromRGB(160,175,160), ExposureCompensation=0.05, ShadowSoftness=0.65, Ambient=Color3.fromRGB(75,85,75), OutdoorAmbient=Color3.fromRGB(135,150,135), ColorShift_Bottom=Color3.fromRGB(95,110,95), ColorShift_Top=Color3.fromRGB(200,215,200) },
+        Bloom={Intensity=0.4,Threshold=0.78,Size=42},
+        ColorCorrection={Brightness=0.04,Saturation=-0.2,Contrast=0.2,TintColor=Color3.fromRGB(230,245,230)},
+        SunRays={Intensity=0.05,Spread=0.65},
+        Atmosphere={Density=0.3,Offset=0.15,Haze=1.4,Glare=0.2,Color=Color3.fromRGB(190,210,190),Decay=Color3.fromRGB(110,130,110)},
+    },
+    ["Haunted Mansion"] = {
+        Lighting = { Brightness=1.35, ClockTime=0.2, FogEnd=5000, ExposureCompensation=0.02, ShadowSoftness=0.75, Ambient=Color3.fromRGB(45,50,65), OutdoorAmbient=Color3.fromRGB(95,105,130), ColorShift_Top=Color3.fromRGB(140,155,200) },
+        Bloom={Intensity=0.5,Threshold=0.75,Size=45},
+        ColorCorrection={Brightness=-0.02,Saturation=-0.15,Contrast=0.32,TintColor=Color3.fromRGB(215,225,255)},
+        SunRays={Intensity=0.03,Spread=0.6},
+        Atmosphere={Density=0.32,Offset=0.15,Haze=1.6,Glare=0.2,Color=Color3.fromRGB(175,190,230),Decay=Color3.fromRGB(80,95,135)},
+    },
+    ["Zombie Apocalypse"] = {
+        Lighting = { Brightness=1.55, ClockTime=12.5, FogEnd=2000, FogColor=Color3.fromRGB(110,115,75), ExposureCompensation=0.01, ShadowSoftness=0.55, Ambient=Color3.fromRGB(65,68,45), OutdoorAmbient=Color3.fromRGB(120,125,85), ColorShift_Bottom=Color3.fromRGB(50,55,30), ColorShift_Top=Color3.fromRGB(185,195,120) },
+        Bloom={Intensity=0.45,Threshold=0.78,Size=44},
+        ColorCorrection={Brightness=0,Saturation=-0.1,Contrast=0.3,TintColor=Color3.fromRGB(225,230,190)},
+        SunRays={Intensity=0.07,Spread=0.7},
+        Atmosphere={Density=0.4,Offset=0.17,Haze=1.9,Glare=0.2,Color=Color3.fromRGB(160,170,110),Decay=Color3.fromRGB(80,88,55)},
+    },
+    ["Curse of the Depths"] = {
+        Lighting = { Brightness=1.45, ClockTime=9.5, FogEnd=1200, FogColor=Color3.fromRGB(20,60,75), ExposureCompensation=0, ShadowSoftness=0.7, Ambient=Color3.fromRGB(15,40,52), OutdoorAmbient=Color3.fromRGB(45,95,110), ColorShift_Bottom=Color3.fromRGB(8,25,35), ColorShift_Top=Color3.fromRGB(70,150,170) },
+        Bloom={Intensity=0.5,Threshold=0.72,Size=46}, Blur={Size=0.4},
+        ColorCorrection={Brightness=0,Saturation=-0.1,Contrast=0.3,TintColor=Color3.fromRGB(215,240,248)},
+        SunRays={Intensity=0.04,Spread=0.6},
+        Atmosphere={Density=0.55,Offset=0.16,Haze=2.4,Glare=0.18,Color=Color3.fromRGB(90,180,200),Decay=Color3.fromRGB(30,80,100)},
+    },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Dreamy", "Colorful", "Синтвейв", "Cotton Candy", "Pastel Sky", "Cherry Blossom", "Amber Dusk", "Lavender Fields", "Inferno", "Rose Twilight", "Moonlight Silver", "Toxic Zone" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Dreamy", "Colorful", "Синтвейв", "Cotton Candy", "Pastel Sky", "Cherry Blossom", "Amber Dusk", "Lavender Fields", "Inferno", "Rose Twilight", "Moonlight Silver", "Toxic Zone", "Nightmare", "Demon Domain", "Cursed Forest", "Graveyard Fog", "Slender", "Dead Silence", "Possession", "Dark Ritual", "Asylum", "Haunted Mansion", "Zombie Apocalypse", "Curse of the Depths" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
