@@ -390,6 +390,7 @@ local Tabs = {
     { Name = "Blobman",      Icon = "ghost" },
     { Name = "Toys",         Icon = "blocks" },
     { Name = "Visual",       Icon = "eye" },
+    { Name = "Music",        Icon = "music" },
     { Name = "Auto-Clicker", Icon = "zap" },
     { Name = "Misc",         Icon = "wrench" },
     { Name = "Lists",        Icon = "list" },
@@ -407,7 +408,7 @@ local HotkeyGroup = TabObjects["Home"]:AddLeftGroupbox("Горячие клав�
 HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть меню (на телефоне — экранные кнопки)")
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
-StatsGroup:AddLabel("Вкладок: 12")
+StatsGroup:AddLabel("Вкладок: 13")
 StatsGroup:AddLabel("Шейдеров: 8")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
@@ -417,23 +418,6 @@ pcall(function()
         Height = 150,
     })
 end)
-
-HomeGroup:AddLabel("Telegram: https://t.me/FTAP_777")
-
-HomeGroup:AddButton({
-    Text = "Скопировать ссылку",
-    Func = function()
-        local ok = pcall(function() setclipboard("https://t.me/FTAP_777") end)
-        if not ok then
-            ok = pcall(function() toclipboard("https://t.me/FTAP_777") end)
-        end
-        if ok then
-            Library:Notify("Ссылка скопирована")
-        else
-            Library:Notify("Копирование не поддерживается инжектором")
-        end
-    end
-})
 
 HomeGroup:AddLabel("PULSAR 2.3 — Obsidian Edition")
 
@@ -850,17 +834,19 @@ local function RemoveShader()
 end
 
 -- =====================================================================
--- ЗВУКОВЫЙ СЕРВИС (используется Mute-категориями ниже)
+-- ЗВУКОВОЙ СЕРВИС (используется Mute-категориями ниже)
 -- =====================================================================
 local SoundService = game:GetService("SoundService")
 
 local PulsarSoundMuteOff
 local GfxUnload
+local PulsarMusicStop
 
 local function VisualsCleanup()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
     if GfxUnload then pcall(GfxUnload) end
+    if PulsarMusicStop then pcall(PulsarMusicStop) end
     Updaters = {}
     if VisualHeartbeat then
         VisualHeartbeat:Disconnect()
@@ -875,6 +861,98 @@ end
 pcall(function()
     Library:OnUnload(VisualsCleanup)
 end)
+
+-- =====================================================================
+-- ВКЛАДКА MUSIC — плеер с сохранёнными треками (публичные аудио Roblox)
+-- =====================================================================
+local MusicTracks = {
+    ["Raining Tacos"] = 142376088,
+    ["Phonk't Out"] = 14145625743,
+    ["RAVE OR DIE"] = 120127258775778,
+    ["Infectious"] = 79451196298919,
+    ["Stadium Rave"] = 1846368080,
+    ["Happy Song"] = 1843404009,
+    ["A Little Lo-Fi"] = 135783618859432,
+    ["Wind Chimes"] = 134467328946090,
+    ["Time To Relax"] = 9044702906,
+    ["Speed Metal Overture"] = 9042370693,
+    ["Abyssal Plain"] = 9042861406,
+    ["Tear It Up"] = 1842763322,
+}
+local MusicOrder = {
+    "Raining Tacos", "Phonk't Out", "RAVE OR DIE", "Infectious",
+    "Stadium Rave", "Happy Song", "A Little Lo-Fi", "Wind Chimes",
+    "Time To Relax", "Speed Metal Overture", "Abyssal Plain", "Tear It Up",
+}
+
+local MusicPlayer = { Sound = nil, Track = MusicOrder[1], Volume = 50 }
+
+local function MusicStop()
+    if MusicPlayer.Sound then
+        pcall(function() MusicPlayer.Sound:Stop() end)
+        pcall(function() MusicPlayer.Sound:Destroy() end)
+        MusicPlayer.Sound = nil
+    end
+end
+PulsarMusicStop = MusicStop
+
+local function MusicPlay()
+    MusicStop()
+    local id = MusicTracks[MusicPlayer.Track]
+    if not id then return end
+    local s = Instance.new("Sound")
+    s.Name = "PulsarMusic"
+    s.SoundId = "rbxassetid://" .. id
+    s.Volume = MusicPlayer.Volume / 50
+    s.Parent = SoundService
+    local t0 = os.clock()
+    while not s.IsLoaded and os.clock() - t0 < 5 do
+        task.wait(0.1)
+    end
+    if not s.IsLoaded or s.TimeLength == 0 then
+        pcall(function() s:Destroy() end)
+        Library:Notify("Трек не загрузился (ограничение Roblox)")
+        return
+    end
+    MusicPlayer.Sound = s
+    s:Play()
+end
+
+local MusicGroup = TabObjects["Music"]:AddLeftGroupbox("Плеер")
+
+MusicGroup:AddDropdown("PulsarMusicTrack", {
+    Values = MusicOrder,
+    Default = 1,
+    Multi = false,
+    Text = "Трек",
+    Callback = function(v)
+        MusicPlayer.Track = v
+    end,
+})
+
+MusicGroup:AddSlider("PulsarMusicVolume", {
+    Text = "Громкость (%)",
+    Default = 50,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(v)
+        MusicPlayer.Volume = v
+        if MusicPlayer.Sound then
+            pcall(function() MusicPlayer.Sound.Volume = v / 50 end)
+        end
+    end,
+})
+
+MusicGroup:AddButton({
+    Text = "Play",
+    Func = MusicPlay,
+})
+
+MusicGroup:AddButton({
+    Text = "Stop",
+    Func = MusicStop,
+})
 
 -- =====================================================================
 -- ВКЛАДКА VISUAL (управление через Obsidian)
