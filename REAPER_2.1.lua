@@ -971,11 +971,20 @@ local PlayBtn = MusicGroup:AddButton({ Text = "▶", Func = MusicTogglePlay })
 MusicPlayBtn = PlayBtn
 local PrevBtn = PlayBtn:AddButton({ Text = "⏮", Func = function() MusicSkip(-1) end })
 local NextBtn = PlayBtn:AddButton({ Text = "⏭", Func = function() MusicSkip(1) end })
-PlayBtn:AddButton({ Text = "⏹", Func = function() MusicStop() end })
+local StopBtn = PlayBtn:AddButton({ Text = "⏹", Func = function() MusicStop() end })
 
 PrevBtn.Base.LayoutOrder = 0
 PlayBtn.Base.LayoutOrder = 1
 NextBtn.Base.LayoutOrder = 2
+StopBtn.Base.LayoutOrder = 3
+
+for _, btn in ipairs({ PlayBtn, PrevBtn, NextBtn, StopBtn }) do
+    pcall(function()
+        btn.Base.BackgroundColor3 = Library.Scheme.BackgroundColor
+        btn.Label.TextColor3 = Color3.new(1, 1, 1)
+        btn.Label.TextTransparency = 0
+    end)
+end
 
 -- =====================================================================
 -- ВКЛАДКА VISUAL (управление через Obsidian)
