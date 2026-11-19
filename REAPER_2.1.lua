@@ -409,7 +409,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 13")
-StatsGroup:AddLabel("Шейдеров: 20")
+StatsGroup:AddLabel("Шейдеров: 14")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -672,48 +672,6 @@ local ShaderPresets = {
         SunRays={Intensity=0.1,Spread=0.75},
         Atmosphere={Density=0.3,Offset=0.15,Haze=1.5,Glare=0.25,Color=Color3.fromRGB(215,195,255),Decay=Color3.fromRGB(140,110,180)},
     },
-    ["Inferno"] = {
-        Lighting = { Brightness=2.15, ClockTime=18.8, FogEnd=2500, FogStart=0, FogColor=Color3.fromRGB(160,65,30), ExposureCompensation=0.04, ShadowSoftness=0.5, Ambient=Color3.fromRGB(95,50,30), OutdoorAmbient=Color3.fromRGB(160,95,60), ColorShift_Bottom=Color3.fromRGB(70,20,10), ColorShift_Top=Color3.fromRGB(255,95,35) },
-        Bloom={Intensity=0.8,Threshold=0.68,Size=58},
-        ColorCorrection={Brightness=0.02,Saturation=0.4,Contrast=0.35,TintColor=Color3.fromRGB(255,185,130)},
-        SunRays={Intensity=0.25,Spread=0.9},
-        Atmosphere={Density=0.35,Offset=0.18,Haze=1.8,Glare=0.35,Color=Color3.fromRGB(255,150,90),Decay=Color3.fromRGB(140,60,35)},
-    },
-    ["Rose Twilight"] = {
-        Lighting = { Brightness=1.85, ClockTime=19.4, FogEnd=6500, ExposureCompensation=0.05, ShadowSoftness=0.65, Ambient=Color3.fromRGB(85,60,75), OutdoorAmbient=Color3.fromRGB(150,120,135), ColorShift_Top=Color3.fromRGB(255,150,175) },
-        Bloom={Intensity=0.65,Threshold=0.73,Size=54},
-        ColorCorrection={Brightness=0.03,Saturation=0.22,Contrast=0.2,TintColor=Color3.fromRGB(255,205,220)},
-        SunRays={Intensity=0.12,Spread=0.8},
-        Atmosphere={Density=0.32,Offset=0.15,Haze=1.6,Glare=0.28,Color=Color3.fromRGB(255,185,210),Decay=Color3.fromRGB(150,100,125)},
-    },
-    ["Moonlight Silver"] = {
-        Lighting = { Brightness=1.6, ClockTime=0.2, FogEnd=12000, ExposureCompensation=0.06, ShadowSoftness=0.7, Ambient=Color3.fromRGB(58,63,75), OutdoorAmbient=Color3.fromRGB(125,135,155) },
-        Bloom={Intensity=0.6,Threshold=0.72,Size=48},
-        ColorCorrection={Brightness=0.02,Saturation=-0.2,Contrast=0.25,TintColor=Color3.fromRGB(226,233,255)},
-        SunRays={Intensity=0.05,Spread=0.65},
-        Atmosphere={Density=0.3,Offset=0.15,Haze=1.2,Glare=0.2,Color=Color3.fromRGB(210,220,250),Decay=Color3.fromRGB(120,135,170)},
-    },
-    ["Toxic Zone"] = {
-        Lighting = { Brightness=1.6, ClockTime=2, FogEnd=3000, FogColor=Color3.fromRGB(95,125,70), ExposureCompensation=0.03, ShadowSoftness=0.6, Ambient=Color3.fromRGB(45,65,40), OutdoorAmbient=Color3.fromRGB(95,125,85), ColorShift_Bottom=Color3.fromRGB(30,55,25), ColorShift_Top=Color3.fromRGB(150,255,70) },
-        Bloom={Intensity=0.75,Threshold=0.66,Size=55},
-        ColorCorrection={Brightness=0.01,Saturation=0.35,Contrast=0.35,TintColor=Color3.fromRGB(226,255,215)},
-        SunRays={Intensity=0.06,Spread=0.7},
-        Atmosphere={Density=0.4,Offset=0.18,Haze=2.0,Glare=0.25,Color=Color3.fromRGB(160,255,110),Decay=Color3.fromRGB(85,130,60)},
-    },
-    ["Nightmare"] = {
-        Lighting = { Brightness=1.2, ClockTime=0, FogEnd=1500, FogStart=0, FogColor=Color3.fromRGB(60,10,14), ExposureCompensation=-0.05, ShadowSoftness=0.8, Ambient=Color3.fromRGB(35,12,16), OutdoorAmbient=Color3.fromRGB(70,25,30), ColorShift_Bottom=Color3.fromRGB(20,0,5), ColorShift_Top=Color3.fromRGB(140,20,30) },
-        Bloom={Intensity=0.9,Threshold=0.6,Size=55}, Blur={Size=0.5},
-        ColorCorrection={Brightness=-0.05,Saturation=-0.1,Contrast=0.55,TintColor=Color3.fromRGB(255,200,205)},
-        SunRays={Intensity=0.04,Spread=0.6},
-        Atmosphere={Density=0.45,Offset=0.18,Haze=2.2,Glare=0.2,Color=Color3.fromRGB(180,60,70),Decay=Color3.fromRGB(80,15,25)},
-    },
-    ["Demon Domain"] = {
-        Lighting = { Brightness=1.5, ClockTime=18.9, FogEnd=2000, FogStart=0, FogColor=Color3.fromRGB(90,15,10), ExposureCompensation=0.06, ShadowSoftness=0.55, Ambient=Color3.fromRGB(60,20,15), OutdoorAmbient=Color3.fromRGB(120,40,30), ColorShift_Bottom=Color3.fromRGB(40,5,0), ColorShift_Top=Color3.fromRGB(255,60,30) },
-        Bloom={Intensity=0.85,Threshold=0.65,Size=60},
-        ColorCorrection={Brightness=0.01,Saturation=0.25,Contrast=0.4,TintColor=Color3.fromRGB(255,200,185)},
-        SunRays={Intensity=0.2,Spread=0.85},
-        Atmosphere={Density=0.4,Offset=0.2,Haze=2.0,Glare=0.35,Color=Color3.fromRGB(255,90,60),Decay=Color3.fromRGB(110,25,15)},
-    },
     ["Cursed Forest"] = {
         Lighting = { Brightness=1.1, ClockTime=6.2, FogEnd=900, FogStart=0, FogColor=Color3.fromRGB(40,60,35), ExposureCompensation=-0.02, ShadowSoftness=0.75, Ambient=Color3.fromRGB(30,45,25), OutdoorAmbient=Color3.fromRGB(65,85,60), ColorShift_Bottom=Color3.fromRGB(15,30,12), ColorShift_Top=Color3.fromRGB(110,150,80) },
         Bloom={Intensity=0.5,Threshold=0.7,Size=45},
@@ -737,7 +695,7 @@ local ShaderPresets = {
     },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Dreamy", "Colorful", "Синтвейв", "Cotton Candy", "Pastel Sky", "Cherry Blossom", "Amber Dusk", "Lavender Fields", "Inferno", "Rose Twilight", "Moonlight Silver", "Toxic Zone", "Nightmare", "Demon Domain", "Cursed Forest", "Graveyard Fog", "Slender" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Dreamy", "Colorful", "Синтвейв", "Cotton Candy", "Pastel Sky", "Cherry Blossom", "Amber Dusk", "Lavender Fields", "Cursed Forest", "Graveyard Fog", "Slender" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
