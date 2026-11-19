@@ -970,6 +970,25 @@ end
 
 local MusicGroup = TabObjects["Music"]:AddLeftGroupbox("Плеер")
 
+local MusicOrder = {}
+for name in pairs(MusicTracks) do
+    MusicOrder[#MusicOrder + 1] = name
+end
+table.sort(MusicOrder)
+
+MusicGroup:AddDropdown("PulsarMusicTrack", {
+    Values = MusicOrder,
+    Multi = false,
+    AllowNull = true,
+    Searchable = true,
+    Text = "Трек",
+    Callback = function(value)
+        if type(value) ~= "string" or not MusicTracks[value] then return end
+        MusicPlayer.Track = value
+        MusicPlay()
+    end,
+})
+
 MusicGroup:AddSlider("PulsarMusicVolume", {
     Text = "Громкость (%)",
     Default = 50,
