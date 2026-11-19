@@ -894,7 +894,7 @@ local function MusicTogglePlay()
         if MusicPlayer.Paused then
             pcall(function() s:Resume() end)
             MusicPlayer.Paused = false
-            SetPlayBtnText("⏸")
+            SetPlayBtnText("| |")
         else
             pcall(function() s:Pause() end)
             MusicPlayer.Paused = true
@@ -948,7 +948,7 @@ function MusicPlay()
     MusicPlayer.Sound = s
     MusicPlayer.Paused = false
     s:Play()
-    SetPlayBtnText("⏸")
+    SetPlayBtnText("| |")
 end
 
 local MusicGroup = TabObjects["Music"]:AddLeftGroupbox("Плеер")
@@ -969,16 +969,14 @@ MusicGroup:AddSlider("PulsarMusicVolume", {
 
 local PlayBtn = MusicGroup:AddButton({ Text = "▶", Func = MusicTogglePlay })
 MusicPlayBtn = PlayBtn
-local PrevBtn = PlayBtn:AddButton({ Text = "⏮", Func = function() MusicSkip(-1) end })
-local NextBtn = PlayBtn:AddButton({ Text = "⏭", Func = function() MusicSkip(1) end })
-local StopBtn = PlayBtn:AddButton({ Text = "⏹", Func = function() MusicStop() end })
+local PrevBtn = PlayBtn:AddButton({ Text = "<<", Func = function() MusicSkip(-1) end })
+local NextBtn = PlayBtn:AddButton({ Text = ">>", Func = function() MusicSkip(1) end })
 
 PrevBtn.Base.LayoutOrder = 0
 PlayBtn.Base.LayoutOrder = 1
 NextBtn.Base.LayoutOrder = 2
-StopBtn.Base.LayoutOrder = 3
 
-for _, btn in ipairs({ PlayBtn, PrevBtn, NextBtn, StopBtn }) do
+for _, btn in ipairs({ PlayBtn, PrevBtn, NextBtn }) do
     pcall(function()
         btn.Base.BackgroundColor3 = Library.Scheme.BackgroundColor
         btn.Label.TextColor3 = Color3.new(1, 1, 1)
