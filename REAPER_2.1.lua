@@ -1,4 +1,3 @@
--- ==========================================
 -- PULSAR 2.3 — OBSIDIAN EDITION + SAVITAR SHADERS
 -- ==========================================
 
@@ -1787,6 +1786,122 @@ do
         end
         table.clear(GfxState.RuntimeConnections)
     end
+end
+
+-- =====================================================================
+-- ВКЛАДКА LISTS — ЧАТ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ PULSAR (ntfy.sh)
+-- =====================================================================
+do
+    local HttpService = game:GetService("HttpService")
+    local CHAT_TOPIC = "pulsar23-chat-k7f2q9xw"
+    local ChatHistory = {}
+    local ChatLabels = {}
+    local SeenChatIds = {}
+    local ChatConn = nil
+
+    local ChatGroup = TabObjects["Lists"]:AddLeftGroupbox("PULSAR Чат")
+
+    local function ChatClean(text)
+        text = tostring(text or ""):gsub("[\r\n\t]", " ")
+        if #text > 120 then text = text:sub(1, 120) end
+        return text
+    end
+
+    for i = 1, 12 do
+        ChatLabels[i] = ChatGroup:AddLabel(i == 1 and "Сообщений пока нет" or "…")
+    end
+
+    local function ChatPush(nick, text)
+        ChatHistory[#ChatHistory + 1] = nick .. ": " .. text
+        while #ChatHistory > 12 do table.remove(ChatHistory, 1) end
+        for i = 1, 12 do
+            local msg = ChatHistory[#ChatHistory - (12 - i)]
+            pcall(function() ChatLabels[i]:SetText(msg or "…") end)
+        end
+    end
+
+    ChatGroup:AddInput("PulsarChatNick", {
+        Text = "Ник",
+        Default = LocalPlayer.Name,
+        Finished = false,
+    })
+
+    ChatGroup:AddInput("PulsarChatMsg", {
+        Text = "Сообщение",
+        Placeholder = "Ввести сообщение…",
+        Finished = false,
+    })
+
+    local function ChatHttpPost(url, body)
+        local req = (syn and syn.request) or (http and http.request) or http_request or request
+        if type(req) == "function" then
+            return pcall(function()
+                req({ Url = url, Method = "POST", Headers = { ["Content-Type"] = "application/json" }, Body = body })
+            end)
+        end
+        return pcall(function()
+            HttpService:PostAsync(url, body, Enum.HttpContentType.ApplicationJson)
+        end)
+    end
+
+    local function ChatSend()
+        local nick = ChatClean(Library.Options.PulsarChatNick.Value)
+        if nick == "" then nick = "guest" end
+        local text = ChatClean(Library.Options.PulsarChatMsg.Value)
+        if text == "" then
+            Library:Notify("Введи сообщение")
+            return
+        end
+        local body = HttpService:JSONEncode({ topic = CHAT_TOPIC, title = nick, message = text })
+        if ChatHttpPost("https://ntfy.sh/", body) then
+            pcall(function() Library.Options.PulsarChatMsg:SetValue("") end)
+            pcall(function() Library.Options.PulsarChatMsg.Value = "" end)
+            pcall(function() Library.Options.PulsarChatMsg:SetText("") end)
+        else
+            Library:Notify("Отправка не удалась (HTTP заблокирован?)")
+        end
+    end
+
+    ChatGroup:AddButton({ Text = "📨 Отправить", Func = ChatSend })
+
+    ChatGroup:AddToggle("PulsarChatAuto", {
+        Text = "Автообновление (5 сек)",
+        Default = true,
+        Callback = function(on)
+            if on then
+                if ChatConn then return end
+                ChatConn = task.spawn(function()
+                    while Library and not Library.Unloaded do
+                        task.wait(5)
+                        local ok, body = pcall(function()
+                            return game:HttpGet("https://ntfy.sh/" .. CHAT_TOPIC .. "/json?poll=1&since=30s")
+                        end)
+                        if ok and type(body) == "string" then
+                            for _, line in ipairs(string.split(body, "\n")) do
+                                local okd, data = pcall(function() return HttpService:JSONDecode(line) end)
+                                if okd and type(data) == "table" and data.event == "message" and data.id and not SeenChatIds[data.id] then
+                                    SeenChatIds[data.id] = true
+                                    ChatPush(ChatClean(data.title or "guest"), ChatClean(data.message or ""))
+                                end
+                            end
+                        end
+                    end
+                end)
+            elseif ChatConn then
+                pcall(function() task.cancel(ChatConn) end)
+                ChatConn = nil
+            end
+        end,
+    })
+
+    pcall(function()
+        Library:OnUnload(function()
+            if ChatConn then
+                pcall(function() task.cancel(ChatConn) end)
+                ChatConn = nil
+            end
+        end)
+    end)
 end
 
 -- =====================================================================
