@@ -418,6 +418,23 @@ pcall(function()
     })
 end)
 
+HomeGroup:AddLabel("Telegram: https://t.me/FTAP_777")
+
+HomeGroup:AddButton({
+    Text = "Скопировать ссылку",
+    Func = function()
+        local ok = pcall(function() setclipboard("https://t.me/FTAP_777") end)
+        if not ok then
+            ok = pcall(function() toclipboard("https://t.me/FTAP_777") end)
+        end
+        if ok then
+            Library:Notify("Ссылка скопирована")
+        else
+            Library:Notify("Копирование не поддерживается инжектором")
+        end
+    end
+})
+
 HomeGroup:AddLabel("PULSAR 2.3 — Obsidian Edition")
 
 local ScriptStartTime = os.clock()
