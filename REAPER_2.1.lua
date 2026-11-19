@@ -409,7 +409,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 13")
-StatsGroup:AddLabel("Шейдеров: 27")
+StatsGroup:AddLabel("Шейдеров: 20")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -735,58 +735,9 @@ local ShaderPresets = {
         SunRays={Intensity=0,Spread=0.5},
         Atmosphere={Density=0.85,Offset=0.1,Haze=3.5,Glare=0.1,Color=Color3.fromRGB(210,210,210),Decay=Color3.fromRGB(160,160,160)},
     },
-    ["Dead Silence"] = {
-        Lighting = { Brightness=1.0, ClockTime=19.8, FogEnd=4000, ExposureCompensation=0, ShadowSoftness=0.7, Ambient=Color3.fromRGB(55,58,65), OutdoorAmbient=Color3.fromRGB(105,110,120), ColorShift_Top=Color3.fromRGB(150,160,180) },
-        Bloom={Intensity=0.4,Threshold=0.8,Size=35},
-        ColorCorrection={Brightness=0,Saturation=-0.6,Contrast=0.3,TintColor=Color3.fromRGB(220,228,240)},
-        SunRays={Intensity=0.02,Spread=0.6},
-        Atmosphere={Density=0.35,Offset=0.15,Haze=1.5,Glare=0.15,Color=Color3.fromRGB(185,195,215),Decay=Color3.fromRGB(95,105,125)},
-    },
-    ["Possession"] = {
-        Lighting = { Brightness=1.7, ClockTime=16.9, FogEnd=2500, FogColor=Color3.fromRGB(120,125,70), ExposureCompensation=0.02, ShadowSoftness=0.6, Ambient=Color3.fromRGB(70,72,40), OutdoorAmbient=Color3.fromRGB(130,135,85), ColorShift_Bottom=Color3.fromRGB(55,60,25), ColorShift_Top=Color3.fromRGB(200,210,120) },
-        Bloom={Intensity=0.55,Threshold=0.72,Size=48},
-        ColorCorrection={Brightness=0.02,Saturation=0.1,Contrast=0.3,TintColor=Color3.fromRGB(235,240,190)},
-        SunRays={Intensity=0.08,Spread=0.7},
-        Atmosphere={Density=0.38,Offset=0.16,Haze=1.9,Glare=0.25,Color=Color3.fromRGB(190,200,120),Decay=Color3.fromRGB(95,105,55)},
-    },
-    ["Dark Ritual"] = {
-        Lighting = { Brightness=1.3, ClockTime=0.5, FogEnd=1800, FogColor=Color3.fromRGB(40,15,60), ExposureCompensation=0.04, ShadowSoftness=0.7, Ambient=Color3.fromRGB(30,12,45), OutdoorAmbient=Color3.fromRGB(60,30,90), ColorShift_Bottom=Color3.fromRGB(20,5,35), ColorShift_Top=Color3.fromRGB(120,50,200) },
-        Bloom={Intensity=0.9,Threshold=0.65,Size=58},
-        ColorCorrection={Brightness=-0.03,Saturation=0.15,Contrast=0.45,TintColor=Color3.fromRGB(235,215,255)},
-        SunRays={Intensity=0.06,Spread=0.7},
-        Atmosphere={Density=0.45,Offset=0.17,Haze=2.1,Glare=0.3,Color=Color3.fromRGB(160,90,255),Decay=Color3.fromRGB(70,30,120)},
-    },
-    ["Asylum"] = {
-        Lighting = { Brightness=1.4, ClockTime=14, FogEnd=3500, FogColor=Color3.fromRGB(160,175,160), ExposureCompensation=0.05, ShadowSoftness=0.65, Ambient=Color3.fromRGB(75,85,75), OutdoorAmbient=Color3.fromRGB(135,150,135), ColorShift_Bottom=Color3.fromRGB(95,110,95), ColorShift_Top=Color3.fromRGB(200,215,200) },
-        Bloom={Intensity=0.4,Threshold=0.78,Size=42},
-        ColorCorrection={Brightness=0.04,Saturation=-0.2,Contrast=0.2,TintColor=Color3.fromRGB(230,245,230)},
-        SunRays={Intensity=0.05,Spread=0.65},
-        Atmosphere={Density=0.3,Offset=0.15,Haze=1.4,Glare=0.2,Color=Color3.fromRGB(190,210,190),Decay=Color3.fromRGB(110,130,110)},
-    },
-    ["Haunted Mansion"] = {
-        Lighting = { Brightness=1.35, ClockTime=0.2, FogEnd=5000, ExposureCompensation=0.02, ShadowSoftness=0.75, Ambient=Color3.fromRGB(45,50,65), OutdoorAmbient=Color3.fromRGB(95,105,130), ColorShift_Top=Color3.fromRGB(140,155,200) },
-        Bloom={Intensity=0.5,Threshold=0.75,Size=45},
-        ColorCorrection={Brightness=-0.02,Saturation=-0.15,Contrast=0.32,TintColor=Color3.fromRGB(215,225,255)},
-        SunRays={Intensity=0.03,Spread=0.6},
-        Atmosphere={Density=0.32,Offset=0.15,Haze=1.6,Glare=0.2,Color=Color3.fromRGB(175,190,230),Decay=Color3.fromRGB(80,95,135)},
-    },
-    ["Zombie Apocalypse"] = {
-        Lighting = { Brightness=1.55, ClockTime=12.5, FogEnd=2000, FogColor=Color3.fromRGB(110,115,75), ExposureCompensation=0.01, ShadowSoftness=0.55, Ambient=Color3.fromRGB(65,68,45), OutdoorAmbient=Color3.fromRGB(120,125,85), ColorShift_Bottom=Color3.fromRGB(50,55,30), ColorShift_Top=Color3.fromRGB(185,195,120) },
-        Bloom={Intensity=0.45,Threshold=0.78,Size=44},
-        ColorCorrection={Brightness=0,Saturation=-0.1,Contrast=0.3,TintColor=Color3.fromRGB(225,230,190)},
-        SunRays={Intensity=0.07,Spread=0.7},
-        Atmosphere={Density=0.4,Offset=0.17,Haze=1.9,Glare=0.2,Color=Color3.fromRGB(160,170,110),Decay=Color3.fromRGB(80,88,55)},
-    },
-    ["Curse of the Depths"] = {
-        Lighting = { Brightness=1.45, ClockTime=9.5, FogEnd=1200, FogColor=Color3.fromRGB(20,60,75), ExposureCompensation=0, ShadowSoftness=0.7, Ambient=Color3.fromRGB(15,40,52), OutdoorAmbient=Color3.fromRGB(45,95,110), ColorShift_Bottom=Color3.fromRGB(8,25,35), ColorShift_Top=Color3.fromRGB(70,150,170) },
-        Bloom={Intensity=0.5,Threshold=0.72,Size=46}, Blur={Size=0.4},
-        ColorCorrection={Brightness=0,Saturation=-0.1,Contrast=0.3,TintColor=Color3.fromRGB(215,240,248)},
-        SunRays={Intensity=0.04,Spread=0.6},
-        Atmosphere={Density=0.55,Offset=0.16,Haze=2.4,Glare=0.18,Color=Color3.fromRGB(90,180,200),Decay=Color3.fromRGB(30,80,100)},
-    },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Dreamy", "Colorful", "Синтвейв", "Cotton Candy", "Pastel Sky", "Cherry Blossom", "Amber Dusk", "Lavender Fields", "Inferno", "Rose Twilight", "Moonlight Silver", "Toxic Zone", "Nightmare", "Demon Domain", "Cursed Forest", "Graveyard Fog", "Slender", "Dead Silence", "Possession", "Dark Ritual", "Asylum", "Haunted Mansion", "Zombie Apocalypse", "Curse of the Depths" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Dreamy", "Colorful", "Синтвейв", "Cotton Candy", "Pastel Sky", "Cherry Blossom", "Amber Dusk", "Lavender Fields", "Inferno", "Rose Twilight", "Moonlight Silver", "Toxic Zone", "Nightmare", "Demon Domain", "Cursed Forest", "Graveyard Fog", "Slender" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
