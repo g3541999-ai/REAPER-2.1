@@ -863,9 +863,26 @@ pcall(function()
 end)
 
 -- =====================================================================
--- ВКЛАДКА MUSIC — плеер с сохранёнными треками (публичные аудио Roblox)
+-- ВКЛАДКА MUSIC — плейлист фонков (публичные аудио Roblox, проверены 19.11.2026)
 -- =====================================================================
-local MusicTracks = {}
+local MusicTracks = {
+    ["TOMA FUNK PHONK"] = 129098116998483,
+    ["ROBLOX PHONK"] = 136932193331774,
+    ["DRIFT NIGHT PHONK"] = 85735197482652,
+    ["Lost Phonk"] = 139266399633943,
+    ["MONTAGEM AURA"] = 126132092368935,
+    ["2 PHUT HON"] = 74793860481732,
+    ["MEGAPHONK"] = 134434412138800,
+    ["ACELERA"] = 131866006114988,
+    ["GIGACHAD PHONK"] = 134366188285514,
+    ["The Final Phonk"] = 14145620056,
+    ["TOKYO DRIFT (PHONK)"] = 96296525605306,
+    ["GYM PHONK"] = 125080074540092,
+    ["Blood on the Asphalt"] = 140439256760765,
+    ["Nightmare (Drift Phonk)"] = 78571301330361,
+    ["SIGMA BOY PHONK"] = 84911925564617,
+    ["Polish Cow Phonk"] = 73460666355457,
+}
 
 local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false }
 local MusicPlayBtn = nil
