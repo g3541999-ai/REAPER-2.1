@@ -1813,9 +1813,11 @@ do
     end
 
     local function SetChatLabel(label, text)
-        pcall(function() label:SetText(text) end)
-        pcall(function() label.Text = text end)
-        pcall(function() label.TextLabel.Text = text end)
+        local ok = pcall(function() label:SetText(text) end)
+        if not ok then
+            pcall(function() label.Text = text end)
+            pcall(function() label.TextLabel.Text = text end)
+        end
     end
 
     local function UpdateChatLabels()
@@ -1832,24 +1834,79 @@ do
         if ChatHistory[#ChatHistory] == entry then return end
         ChatHistory[#ChatHistory + 1] = entry
         while #ChatHistory > 12 do table.remove(ChatHistory, 1) end
-        pcall(UpdateChatLabels)
+        UpdateChatLabels()
     end
 
     local function ChatHttpPost(url, body)
         local req = (syn and syn.request) or (http and http.request) or http_request or request
         if type(req) == "function" then
             local okr, resp = pcall(function()
-                return req({ Url = url, Method = "POST", Headers = { ["Content-Type"] = "application/json" }, Body = body })
+                return req({ Url = url, Uri = url, Method = "POST", Headers = { ["Content-Type"] = "application/json" }, Body = body })
             end)
             if okr and type(resp) == "table" then
-                return true, type(resp.Body) == "string" and resp.Body or ""
+                local rb = (type(resp.Body) == "string" and resp.Body) or (type(resp.body) == "string" and resp.body) or ""
+                return true, rb
             end
-            return okr, ""
         end
         local okp, resp = pcall(function()
             return HttpService:PostAsync(url, body, Enum.HttpContentType.ApplicationJson)
         end)
-        return okp, type(resp) == "string" and resp or ""
+        if okp and type(resp) == "string" then
+            return true, resp
+        end
+        local okq, resp2 = pcall(function()
+            return HttpService:RequestAsync({ Url = url, Method = "POST", Headers = { ["Content-Type"] = "application/json" }, Body = body })
+        end)
+        if okq and type(resp2) == "table" and resp2.Success then
+            return true, type(resp2.Body) == "string" and resp2.Body or ""
+        end
+        return false, ""
+    end
+
+    local function ChatHttpGet(url)
+        local req = (syn and syn.request) or (http and http.request) or http_request or request
+        if type(req) == "function" then
+            local okr, resp = pcall(function()
+                return req({ Url = url, Uri = url, Method = "GET" })
+            end)
+            if okr and type(resp) == "table" then
+                local rb = (type(resp.Body) == "string" and resp.Body) or (type(resp.body) == "string" and resp.body)
+                if rb then
+                    return true, rb
+                end
+            end
+        end
+        local okh, body = pcall(function()
+            return HttpService:GetAsync(url)
+        end)
+        if okh and type(body) == "string" then
+            return true, body
+        end
+        return pcall(function()
+            return game:HttpGet(url)
+        end)
+    end
+
+    local PollFailNotified = false
+
+    local function PollOnce()
+        local ok, body = ChatHttpGet("https://ntfy.sh/" .. CHAT_TOPIC .. "/json?poll=1&since=60s")
+        if not (ok and type(body) == "string") then
+            if not PollFailNotified then
+                PollFailNotified = true
+                pcall(function() Library:Notify("Чат: сообщения не приходят (HTTP заблокирован?)") end)
+            end
+            return false
+        end
+        PollFailNotified = false
+        for _, line in ipairs(string.split(body, "\n")) do
+            local okd, data = pcall(function() return HttpService:JSONDecode(line) end)
+            if okd and type(data) == "table" and data.event == "message" and data.id and not SeenChatIds[data.id] then
+                SeenChatIds[data.id] = true
+                ChatPush(ChatClean(data.title or "guest"), ChatClean(data.message or ""))
+            end
+        end
+        return true
     end
 
     local function MarkSeen(body)
@@ -1890,25 +1947,9 @@ do
             pcall(function() Library.Options.PulsarChatMsg:SetValue("") end)
             pcall(function() Library.Options.PulsarChatMsg.Value = "" end)
             pcall(function() Library.Options.PulsarChatMsg:SetText("") end)
-            pcall(function() Library.Options.PulsarChatMsg.Text = "" end)
         else
-            Library:Notify("Отправка не удалась (HTTP заблокирован?)")
+            Library:Notify("Отправка не удалась — включи доступ к HTTP-запросам в инжекторе")
         end
-    end
-
-    local function PollOnce()
-        local ok, body = pcall(function()
-            return game:HttpGet("https://ntfy.sh/" .. CHAT_TOPIC .. "/json?poll=1&since=10m")
-        end)
-        if not (ok and type(body) == "string") then return false end
-        for _, line in ipairs(string.split(body, "\n")) do
-            local okd, data = pcall(function() return HttpService:JSONDecode(line) end)
-            if okd and type(data) == "table" and data.event == "message" and data.id and not SeenChatIds[data.id] then
-                SeenChatIds[data.id] = true
-                ChatPush(ChatClean(data.title or "guest"), ChatClean(data.message or ""))
-            end
-        end
-        return true
     end
 
     local function StartPolling()
