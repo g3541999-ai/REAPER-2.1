@@ -1812,15 +1812,27 @@ do
         ChatLabels[i] = MsgGroup:AddLabel(i == 1 and "Сообщений пока нет" or "…")
     end
 
+    local function SetChatLabel(label, text)
+        pcall(function() label:SetText(text) end)
+        pcall(function() label.Text = text end)
+        pcall(function() label.TextLabel.Text = text end)
+    end
+
+    local function UpdateChatLabels()
+        local total = #ChatHistory
+        for i = 1, 12 do
+            local from = total - (12 - i)
+            local msg = (from >= 1) and ChatHistory[from] or "…"
+            pcall(function() SetChatLabel(ChatLabels[i], msg) end)
+        end
+    end
+
     local function ChatPush(nick, text)
         local entry = nick .. ": " .. text
         if ChatHistory[#ChatHistory] == entry then return end
         ChatHistory[#ChatHistory + 1] = entry
         while #ChatHistory > 12 do table.remove(ChatHistory, 1) end
-        for i = 1, 12 do
-            local msg = ChatHistory[#ChatHistory - (12 - i)]
-            pcall(function() ChatLabels[i]:SetText(msg or "…") end)
-        end
+        pcall(UpdateChatLabels)
     end
 
     local function ChatHttpPost(url, body)
@@ -1878,6 +1890,7 @@ do
             pcall(function() Library.Options.PulsarChatMsg:SetValue("") end)
             pcall(function() Library.Options.PulsarChatMsg.Value = "" end)
             pcall(function() Library.Options.PulsarChatMsg:SetText("") end)
+            pcall(function() Library.Options.PulsarChatMsg.Text = "" end)
         else
             Library:Notify("Отправка не удалась (HTTP заблокирован?)")
         end
@@ -1903,7 +1916,7 @@ do
         ChatConn = task.spawn(function()
             while Library and not Library.Unloaded do
                 pcall(PollOnce)
-                task.wait(5)
+                task.wait(1)
             end
         end)
     end
@@ -1920,7 +1933,7 @@ do
     MsgGroup:AddButton({ Text = "🔄 Обновить", Func = function() pcall(PollOnce) end })
 
     InputGroup:AddToggle("PulsarChatAuto", {
-        Text = "Автообновление (5 сек)",
+        Text = "Автообновление (1 сек)",
         Default = true,
         Callback = function(on)
             if on then
