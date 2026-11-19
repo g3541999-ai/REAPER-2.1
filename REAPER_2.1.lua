@@ -278,11 +278,80 @@ local Window = Library:CreateWindow({
     SidebarCompactWidth = 56,
     ToggleKeybind = Enum.KeyCode.M,
     ShowMobileButtons = true,
-    SearchbarSize = UDim2.fromScale(0.5, 1),
+    SearchbarSize = UDim2.fromOffset(36, 36),
 })
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() PulsarLoaderComplete() end)
 pcall(function() LockGui.Enabled = true end)
+
+-- ПОИСК: квадратик 36x36 с лупой у крестика, при клике разворачивается в строку
+local SearchCollapseSize = UDim2.fromOffset(36, 36)
+task.spawn(function()
+    local root = (gethui and gethui()) or game:GetService("CoreGui")
+    local searchBox
+    for _ = 1, 60 do
+        for _, d in ipairs(root:GetDescendants()) do
+            if d:IsA("TextBox") and d.PlaceholderText == "Search" then
+                searchBox = d
+                break
+            end
+        end
+        if searchBox then break end
+        task.wait(0.1)
+    end
+    if not searchBox then return end
+    searchBox.PlaceholderText = ""
+    Library:GiveSignal(searchBox.Focused:Connect(function()
+        searchBox.PlaceholderText = "Search"
+        pcall(function()
+            TweenService:Create(searchBox, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0.55, 0, 0, 36),
+            }):Play()
+        end)
+    end))
+    Library:GiveSignal(searchBox.FocusLost:Connect(function()
+        searchBox.Text = ""
+        searchBox.PlaceholderText = ""
+        pcall(function()
+            TweenService:Create(searchBox, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = SearchCollapseSize,
+            }):Play()
+        end)
+    end))
+end)
+
+-- ПЕРЕКЛЮЧАТЕЛИ: квадратные чекбоксы без ползунка, при включении загораются цветом панели
+task.spawn(function()
+    local root = (gethui and gethui()) or game:GetService("CoreGui")
+    local function FindSwitchParts(d)
+        if not d:IsA("Frame") then return nil end
+        if d.Size.X.Offset ~= 32 or d.Size.Y.Offset ~= 18 then return nil end
+        local corner = d:FindFirstChildOfClass("UICorner")
+        local stroke = d:FindFirstChildOfClass("UIStroke")
+        if not corner or not stroke then return nil end
+        for _, ch in ipairs(d:GetChildren()) do
+            if ch:IsA("Frame") and ch.SizeConstraint == Enum.SizeConstraint.RelativeYY and ch:FindFirstChildOfClass("UICorner") then
+                return { Frame = d, Corner = corner, Ball = ch }
+            end
+        end
+        return nil
+    end
+    for _ = 1, 30 do
+        local processed = 0
+        for _, d in ipairs(root:GetDescendants()) do
+            local sw = FindSwitchParts(d)
+            if sw and not sw.Frame:GetAttribute("PulsarSquare") then
+                sw.Frame:SetAttribute("PulsarSquare", true)
+                sw.Ball.Visible = false
+                sw.Corner.CornerRadius = UDim.new(0, 0)
+                sw.Frame.Size = UDim2.fromOffset(18, 18)
+                processed = processed + 1
+            end
+        end
+        if processed == 0 then break end
+        task.wait(0.3)
+    end
+end)
 
 local Tabs = {
     { Name = "Home",         Icon = "house" },
@@ -311,7 +380,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 12")
-StatsGroup:AddLabel("Шейдеров: 11")
+StatsGroup:AddLabel("Шейдеров: 8")
 StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -546,11 +615,6 @@ local ShaderPresets = {
         SunRays={Intensity=0.08,Spread=0.65},
         Atmosphere={Density=0.18,Offset=0.15,Haze=0.6,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
     },
-    ["Thunderstorm"] = {
-        Lighting = { Brightness=1.7, ClockTime=19.4, FogEnd=900, FogStart=0, FogColor=Color3.fromRGB(70,75,90), ExposureCompensation=-0.02, ShadowSoftness=0.4, Ambient=Color3.fromRGB(45,47,55), ColorShift_Top=Color3.fromRGB(120,128,150), OutdoorAmbient=Color3.fromRGB(90,95,115) },
-        ColorCorrection={Saturation=-0.12,Contrast=0.18,TintColor=Color3.fromRGB(215,220,235)},
-        Atmosphere={Density=0.3,Offset=0.2,Haze=1.6,Glare=0.05,Color=Color3.fromRGB(90,95,115),Decay=Color3.fromRGB(80,85,105)},
-    },
     ["Синтвейв"] = {
         Lighting = { Brightness=2.3, ClockTime=18.3, FogEnd=3500, FogStart=0, FogColor=Color3.fromRGB(180,80,200), ExposureCompensation=0.15, ShadowSoftness=0.3, Ambient=Color3.fromRGB(90,40,120), ColorShift_Bottom=Color3.fromRGB(70,0,95), ColorShift_Top=Color3.fromRGB(255,110,230), OutdoorAmbient=Color3.fromRGB(150,60,140) },
         Bloom={Intensity=0.9,Threshold=0.75,Size=60},
@@ -558,21 +622,9 @@ local ShaderPresets = {
         SunRays={Intensity=0.12,Spread=0.7},
         Atmosphere={Density=0.35,Offset=0.15,Haze=2.0,Glare=0.3,Color=Color3.fromRGB(255,150,220),Decay=Color3.fromRGB(140,60,150)},
     },
-    ["Кровавая луна"] = {
-        Lighting = { Brightness=2.3, ClockTime=0, FogEnd=6000, FogStart=0, FogColor=Color3.fromRGB(55,50,60), ExposureCompensation=0.2, ShadowSoftness=0, Ambient=Color3.fromRGB(50,45,55), ColorShift_Top=Color3.fromRGB(120,90,95), OutdoorAmbient=Color3.fromRGB(80,70,80) },
-        Bloom={Intensity=0.7,Threshold=0.7,Size=44},
-        ColorCorrection={Saturation=0,Contrast=0.15,TintColor=Color3.fromRGB(255,240,238)},
-        Atmosphere={Density=0.25,Offset=0.2,Haze=1.2,Glare=0.1,Color=Color3.fromRGB(120,90,95),Decay=Color3.fromRGB(70,55,60)},
-    },
-    ["Глубокий космос"] = {
-        Lighting = { Brightness=1.6, ClockTime=0, FogEnd=100000, ExposureCompensation=0.12, ShadowSoftness=0.4, Ambient=Color3.fromRGB(24,22,48), ColorShift_Top=Color3.fromRGB(120,110,220), OutdoorAmbient=Color3.fromRGB(45,42,85) },
-        Bloom={Intensity=1.0,Threshold=0.6,Size=60},
-        ColorCorrection={Saturation=-0.1,Contrast=0.25,TintColor=Color3.fromRGB(205,205,255)},
-        Atmosphere={Density=0.15,Offset=0.15,Haze=0.7,Glare=0.2,Color=Color3.fromRGB(120,115,255),Decay=Color3.fromRGB(55,50,130)},
-    },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful", "Thunderstorm", "Синтвейв", "Кровавая луна", "Глубокий космос" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Neon Night", "Lost Ocean", "Dreamy", "Colorful", "Синтвейв" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -642,7 +694,6 @@ local function lerpColor(a, b, t)
 end
 
 local ShaderState = { Active = false, CurrentName = "Scarlet Atmosphere", Level = 8 }
-local StormStart, StormStop
 
 local function ApplyShader(shaderName, level)
     SaveOriginal()
@@ -727,27 +778,6 @@ local function ApplyShader(shaderName, level)
         sky.SunAngularSize = 14
         ActiveEffects[#ActiveEffects+1] = sky
     end
-    if shaderName == "Thunderstorm" then
-        local stormSky = Instance.new("Sky", Lighting)
-        stormSky.Name = "SavitarStormSky"
-        stormSky.CelestialBodiesShown = false
-        stormSky.StarCount = 0
-        ActiveEffects[#ActiveEffects+1] = stormSky
-        local terrain = workspace:FindFirstChildOfClass("Terrain")
-        if terrain then
-            local clouds = terrain:FindFirstChildOfClass("Clouds")
-            if not clouds then
-                clouds = Instance.new("Clouds")
-                clouds.Parent = terrain
-                ActiveEffects[#ActiveEffects+1] = clouds
-            end
-            clouds.Enabled = true
-            clouds.Cover = math.clamp(0.4 + t * 0.5, 0, 1)
-            clouds.Density = 0.7
-            clouds.Color = Color3.fromRGB(120, 125, 135)
-        end
-    end
-
     if shaderName == "Синтвейв" then
         local swSky = Instance.new("Sky", Lighting)
         swSky.Name = "SavitarSynthSky"
@@ -762,47 +792,6 @@ local function ApplyShader(shaderName, level)
         ActiveEffects[#ActiveEffects+1] = swSky
     end
 
-    if shaderName == "Кровавая луна" then
-        local bmBlack = "rbxasset://textures/blackBkg_square.png"
-        local bmSky = Instance.new("Sky", Lighting)
-        bmSky.Name = "SavitarBloodSky"
-        bmSky.SkyboxBk = bmBlack
-        bmSky.SkyboxFt = bmBlack
-        bmSky.SkyboxLf = bmBlack
-        bmSky.SkyboxRt = bmBlack
-        bmSky.SkyboxUp = bmBlack
-        bmSky.SkyboxDn = bmBlack
-        bmSky.MoonTextureId = "rbxassetid://7355674024"
-        bmSky.MoonAngularSize = 30
-        bmSky.SunAngularSize = 0
-        bmSky.CelestialBodiesShown = true
-        bmSky.StarCount = 1000
-        ActiveEffects[#ActiveEffects+1] = bmSky
-    end
-
-    if shaderName == "Глубокий космос" then
-        local spBlack = "rbxasset://textures/blackBkg_square.png"
-        local spSky = Instance.new("Sky", Lighting)
-        spSky.Name = "SavitarSpaceSky"
-        spSky.SkyboxBk = spBlack
-        spSky.SkyboxFt = spBlack
-        spSky.SkyboxLf = spBlack
-        spSky.SkyboxRt = spBlack
-        spSky.SkyboxUp = spBlack
-        spSky.SkyboxDn = spBlack
-        spSky.SunAngularSize = 0
-        spSky.MoonAngularSize = 0
-        spSky.CelestialBodiesShown = true
-        spSky.StarCount = 5000
-        ActiveEffects[#ActiveEffects+1] = spSky
-    end
-
-    if shaderName == "Thunderstorm" then
-        StormStart(level)
-    else
-        StormStop()
-    end
-
     ShaderState.Active = true
     ShaderState.CurrentName = shaderName
     ShaderState.Level = level
@@ -812,122 +801,18 @@ end
 local function RemoveShader()
     DestroyEffects()
     RestoreOriginal()
-    StormStop()
     ShaderState.Active = false
 end
 
 -- =====================================================================
--- ГРОЗА (ливень + молнии со звуком) — для пресета Thunderstorm
+-- ЗВУКОВЫЙ СЕРВИС (используется Mute-категориями ниже)
 -- =====================================================================
-local STORM_THUNDER_IDS = { 98719867425764, 133426162, 4961240438 }
 local SoundService = game:GetService("SoundService")
-local Storm = { Zone = nil, Sound = nil, MoveConn = nil, FlashConn = nil, Rain = nil }
-
-local RainSettings = { Density = 40, Speed = 100, Size = 0.1, CountOn = false, Count = 2000 }
-
-local function RainRateCalc(level)
-    if RainSettings.CountOn then return RainSettings.Count end
-    return RainSettings.Density * level
-end
-
-StormStop = function()
-    if Storm.FlashConn then
-        pcall(function() task.cancel(Storm.FlashConn) end)
-        Storm.FlashConn = nil
-    end
-    if Storm.MoveConn then Storm.MoveConn:Disconnect() Storm.MoveConn = nil end
-    if Storm.Zone then Storm.Zone:Destroy() Storm.Zone = nil end
-    Storm.Rain = nil
-    Storm.Sound = nil
-end
-
-StormStart = function(level)
-    StormStop()
-    level = math.clamp(tonumber(level) or 8, 0, 10)
-    local cam = workspace.CurrentCamera
-    if not cam then return end
-
-    local zone = Instance.new("Part")
-    zone.Name = "PulsarRainZone"
-    zone.Anchored = true
-    zone.CanCollide = false
-    zone.CanQuery = false
-    zone.Transparency = 1
-    zone.Size = Vector3.new(60, 1, 60)
-    zone.Parent = cam
-
-    local rain = Instance.new("ParticleEmitter")
-    rain.Name = "PulsarRain"
-    rain.Texture = "rbxasset://textures/particles/smoke_main.dds"
-    rain.Color = ColorSequence.new(Color3.fromRGB(190, 215, 255))
-    rain.Transparency = NumberSequence.new(0.1)
-    rain.LightEmission = 0.6
-    rain.Lifetime = NumberRange.new(1.0, 1.4)
-    rain.Rate = RainRateCalc(level)
-    rain.Speed = NumberRange.new(math.max(RainSettings.Speed - 10, 0), RainSettings.Speed + 10)
-    rain.Size = NumberSequence.new(RainSettings.Size)
-    rain.EmissionDirection = Enum.NormalId.Bottom
-    rain.SpreadAngle = Vector2.new(2, 2)
-    rain.Parent = zone
-    Storm.Zone = zone
-    Storm.Rain = rain
-
-    for _, id in ipairs(STORM_THUNDER_IDS) do
-        local s = Instance.new("Sound")
-        s.Name = "PulsarThunder"
-        s.SoundId = "rbxassetid://" .. id
-        s.Volume = 1
-        s.Parent = SoundService
-        local t0 = os.clock()
-        while not s.IsLoaded and os.clock() - t0 < 2.5 do
-            task.wait(0.1)
-        end
-        if s.IsLoaded and s.TimeLength > 0 then
-            Storm.Sound = s
-            break
-        end
-        s:Destroy()
-    end
-
-    Storm.MoveConn = RunService.Heartbeat:Connect(function()
-        local c = workspace.CurrentCamera
-        if Storm.Zone and c then
-            Storm.Zone.CFrame = CFrame.new(c.CFrame.Position + c.CFrame.LookVector * 20 + Vector3.new(0, 45, 0))
-        end
-    end)
-
-    Storm.FlashConn = task.spawn(function()
-        while Storm.Zone and Storm.Zone.Parent do
-            task.wait(math.random(3, 8))
-            if not (Storm.Zone and Storm.Zone.Parent) then break end
-            local base = Lighting.Brightness
-            local baseExp = Lighting.ExposureCompensation
-            pcall(function()
-                Lighting.Brightness = base + 3
-                Lighting.ExposureCompensation = baseExp + 0.6
-                task.wait(0.1)
-                Lighting.Brightness = base + 1
-                Lighting.ExposureCompensation = baseExp + 0.2
-                task.wait(0.15)
-                Lighting.Brightness = base + 2.5
-                task.wait(0.08)
-                Lighting.Brightness = base
-                Lighting.ExposureCompensation = baseExp
-            end)
-            if Storm.Sound then
-                task.delay(0.3, function()
-                    pcall(function() Storm.Sound:Play() end)
-                end)
-            end
-        end
-    end)
-end
 
 local PulsarSoundMuteOff
 local GfxUnload
 
 local function VisualsCleanup()
-    StormStop()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
     if GfxUnload then pcall(GfxUnload) end
