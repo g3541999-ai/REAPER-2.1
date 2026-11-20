@@ -1067,10 +1067,17 @@ local function CustomSkyBuild(id)
         p.CastShadow = false
         p.Transparency = 1
         p.Size = w.Size
-        local d = Instance.new("Decal")
-        d.Face = w.Face
-        d.Texture = "rbxassetid://" .. id
-        d.Parent = p
+        local sg = Instance.new("SurfaceGui")
+        sg.Name = "SkyImage"
+        sg.Face = w.Face
+        sg.LightInfluence = 0
+        sg.Brightness = 2
+        sg.Parent = p
+        local img = Instance.new("ImageLabel")
+        img.BackgroundTransparency = 1
+        img.Size = UDim2.fromScale(1, 1)
+        img.Image = "rbxthumb://type=Asset&w=420&h=420&id=" .. id
+        img.Parent = sg
         p.Parent = model
         w.Part = p
     end
