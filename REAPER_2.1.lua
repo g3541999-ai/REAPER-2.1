@@ -1019,8 +1019,6 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 -- =====================================================================
 -- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — 4 стены + потолок
 -- =====================================================================
-local CustomSkyProps = { "SkyboxBk", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp" }
-
 local CustomSkyQuick = {
     ["🐱 Аниме кошкодевочка"] = 1051301909,
     ["🌸 Кавай с цветами"] = 5923420036,
@@ -1029,44 +1027,66 @@ local CustomSkyQuick = {
 }
 local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 Кавай с цветами", "🖤 Чёрно-белое аниме", "🤖 Кибер-киса" }
 
-local CustomSkyState = { Sky = nil, Backup = nil }
+local CustomSkyState = { Model = nil, Conn = nil }
+
+-- Куб 500x500x500 вокруг камеры: 4 стены + потолок, пола нет.
+-- Off = сдвиг части относительно камеры, Face = сторона декали (лицом внутрь).
+local CustomSkyWalls = {
+    { Name = "FrontWall", Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, -250), Face = Enum.NormalId.Back },
+    { Name = "BackWall",  Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, 250),  Face = Enum.NormalId.Front },
+    { Name = "LeftWall",  Size = Vector3.new(2, 500, 500), Off = Vector3.new(-250, 0, 0), Face = Enum.NormalId.Right },
+    { Name = "RightWall", Size = Vector3.new(2, 500, 500), Off = Vector3.new(250, 0, 0),  Face = Enum.NormalId.Left },
+    { Name = "Ceiling",   Size = Vector3.new(500, 2, 500), Off = Vector3.new(0, 250, 0),  Face = Enum.NormalId.Bottom },
+}
 
 local function CustomSkyRemove()
-    local sky = CustomSkyState.Sky
-    if not sky then return end
-    CustomSkyState.Sky = nil
-    if CustomSkyState.Backup then
-        pcall(function()
-            for k, v in pairs(CustomSkyState.Backup) do sky[k] = v end
-        end)
-        CustomSkyState.Backup = nil
-    else
-        pcall(function() sky:Destroy() end)
+    if CustomSkyState.Conn then
+        pcall(function() CustomSkyState.Conn:Disconnect() end)
+        CustomSkyState.Conn = nil
+    end
+    if CustomSkyState.Model then
+        pcall(function() CustomSkyState.Model:Destroy() end)
+        CustomSkyState.Model = nil
     end
 end
 PulsarCustomSkyOff = CustomSkyRemove
 
-local function CustomSkyPatch(patch)
-    if not next(patch) then return end
-    local sky = Lighting:FindFirstChildOfClass("Sky")
-    if sky then
-        if not CustomSkyState.Sky then
-            local backup = {}
-            for _, prop in ipairs(CustomSkyProps) do
-                backup[prop] = sky[prop]
+local function CustomSkyBuild(id)
+    CustomSkyRemove()
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    local model = Instance.new("Model")
+    model.Name = "PulsarSkyCube"
+    for _, w in ipairs(CustomSkyWalls) do
+        local p = Instance.new("Part")
+        p.Name = w.Name
+        p.Anchored = true
+        p.CanCollide = false
+        p.CanQuery = false
+        p.CanTouch = false
+        p.CastShadow = false
+        p.Transparency = 1
+        p.Size = w.Size
+        local d = Instance.new("Decal")
+        d.Face = w.Face
+        d.Texture = "rbxassetid://" .. id
+        d.Parent = p
+        p.Parent = model
+        w.Part = p
+    end
+    model.Parent = workspace
+    CustomSkyState.Model = model
+    local function Follow()
+        local c = workspace.CurrentCamera
+        if not c then return end
+        for _, w in ipairs(CustomSkyWalls) do
+            if w.Part and w.Part.Parent then
+                w.Part.CFrame = c.CFrame * CFrame.new(w.Off)
             end
-            CustomSkyState.Backup = backup
         end
-    else
-        sky = Instance.new("Sky")
-        sky.Name = "PulsarCustomSky"
-        sky.Parent = Lighting
-        CustomSkyState.Backup = nil
     end
-    for prop, id in pairs(patch) do
-        sky[prop] = "rbxassetid://" .. id
-    end
-    CustomSkyState.Sky = sky
+    pcall(Follow)
+    CustomSkyState.Conn = cam:GetPropertyChangedSignal("CFrame"):Connect(Follow)
 end
 
 local CustomSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
@@ -1102,20 +1122,12 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
                 pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
                 return
             end
-            CustomSkyPatch({ SkyboxBk = id, SkyboxFt = id, SkyboxLf = id, SkyboxRt = id, SkyboxUp = id })
-            Library:Notify("Небо поставлено (ID: " .. id .. ")")
+            CustomSkyBuild(id)
+            Library:Notify("Куб с небом поставлен (ID: " .. id .. ")")
         else
             CustomSkyRemove()
             Library:Notify("Небо возвращено как было")
         end
-    end,
-})
-
-CustomSkyGroup:AddButton({
-    Text = "🔄 Вернуть своё небо",
-    Func = function()
-        CustomSkyRemove()
-        Library:Notify("Небо возвращено как было")
     end,
 })
 
