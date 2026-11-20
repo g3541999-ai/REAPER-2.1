@@ -2,7 +2,7 @@
 -- ==========================================
 
 -- =====================================================================
--- ЗАГРУЗОЧНЫЙ ЭКРАН (полупрозрачный фон, карточка растёт как у Resonance 2.9)
+-- ЗАГРУЗОЧНЫЙ ЭКРАН (фон, карточка растёт как у Resonance 2.9)
 -- =====================================================================
 local TweenService = game:GetService("TweenService")
 local loaderGui = Instance.new("ScreenGui")
@@ -83,7 +83,7 @@ task.spawn(function()
     local intro = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local introBack = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     pcall(function()
-        TweenService:Create(loaderBack, introBack, { BackgroundTransparency = 0.45 }):Play()
+        TweenService:Create(loaderBack, introBack, { BackgroundTransparency = 0 }):Play()
         TweenService:Create(loaderFrame, intro, { Size = UDim2.fromOffset(360, 90) }):Play()
     end)
     task.wait(0.35)
@@ -131,7 +131,7 @@ function PulsarLoaderComplete()
     task.wait(0.6)
     if not loaderGui or typeof(loaderGui) ~= "Instance" then return end
 
-    local out = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local out = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     pcall(function()
         TweenService:Create(loaderBack, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderFrame, out, { BackgroundTransparency = 1 }):Play()
@@ -140,7 +140,7 @@ function PulsarLoaderComplete()
         TweenService:Create(loaderBar, out, { BackgroundTransparency = 1 }):Play()
         TweenService:Create(loaderFill, out, { BackgroundTransparency = 1 }):Play()
     end)
-    task.wait(0.7)
+    task.wait(0.5)
     pcall(function() loaderGui:Destroy() end)
     loaderGui = nil
 end
