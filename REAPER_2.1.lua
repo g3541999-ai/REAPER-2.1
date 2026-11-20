@@ -408,7 +408,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 13")
-StatsGroup:AddLabel("Шейдеров: 8")
+StatsGroup:AddLabel("Шейдеров: 6")
 local PlayersLabel = StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -613,20 +613,6 @@ local ShaderPresets = {
         SunRays={Intensity=0.18,Spread=0.9},
         Atmosphere={Density=0.32,Offset=0.15,Haze=1.4,Glare=0.35,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
     },
-    ["Северное сияние"] = {
-        Lighting = { Brightness=1.4, ClockTime=0, FogEnd=12000, ExposureCompensation=0.05, ShadowSoftness=0.8, Ambient=Color3.fromRGB(35,45,60), OutdoorAmbient=Color3.fromRGB(90,120,130), ColorShift_Top=Color3.fromRGB(120,255,200) },
-        Bloom={Intensity=0.7,Threshold=0.72,Size=58},
-        ColorCorrection={Brightness=0.02,Saturation=0.1,Contrast=0.2,TintColor=Color3.fromRGB(210,240,230)},
-        SunRays={Intensity=0,Spread=0.6},
-        Atmosphere={Density=0.32,Offset=0.15,Haze=2.2,Glare=0.4,Color=Color3.fromRGB(130,255,200),Decay=Color3.fromRGB(90,140,160)},
-    },
-    ["Туманное утро"] = {
-        Lighting = { Brightness=1.9, ClockTime=7.5, FogEnd=4000, FogStart=0, FogColor=Color3.fromRGB(215,220,228), ExposureCompensation=0.02, ShadowSoftness=0.85, Ambient=Color3.fromRGB(95,98,105), OutdoorAmbient=Color3.fromRGB(175,180,190), ColorShift_Top=Color3.fromRGB(240,240,248) },
-        Bloom={Intensity=0.35,Threshold=0.88,Size=42},
-        ColorCorrection={Brightness=0.02,Saturation=-0.05,Contrast=0.12,TintColor=Color3.fromRGB(240,242,246)},
-        SunRays={Intensity=0.08,Spread=0.7},
-        Atmosphere={Density=0.38,Offset=0.12,Haze=2.0,Glare=0.2,Color=Color3.fromRGB(225,230,240),Decay=Color3.fromRGB(160,165,180)},
-    },
     ["Dreamy"] = {
         Lighting = { Brightness=2, ClockTime=16.8, FogEnd=100000, ExposureCompensation=0.08, ShadowSoftness=0.9, Ambient=Color3.fromRGB(61,61,68) },
         Bloom={Intensity=0.9,Threshold=0.75,Size=70}, Blur={Size=0.35},
@@ -657,7 +643,7 @@ local ShaderPresets = {
     },
 }
 
-local ShaderOrder = { "Северное сияние", "Туманное утро", "Scarlet Atmosphere", "Golden Hour", "Dreamy", "Синтвейв", "Lavender Fields", "Slender" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Dreamy", "Синтвейв", "Lavender Fields", "Slender" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -824,20 +810,6 @@ local function ApplyShader(shaderName, level)
         swSky.StarCount = 1500
         ActiveEffects[#ActiveEffects+1] = swSky
     end
-    if shaderName == "Северное сияние" then
-        local aurSky = Instance.new("Sky", Lighting)
-        aurSky.Name = "SavitarAuroraSky"
-        aurSky.SkyboxUp = "rbxassetid://323493360"
-        aurSky.SkyboxLf = "rbxassetid://323494252"
-        aurSky.SkyboxBk = "rbxassetid://323494035"
-        aurSky.SkyboxFt = "rbxassetid://323494130"
-        aurSky.SkyboxDn = "rbxassetid://323494368"
-        aurSky.SkyboxRt = "rbxassetid://323494067"
-        aurSky.SunAngularSize = 0
-        aurSky.MoonAngularSize = 0
-        aurSky.StarCount = 3000
-        ActiveEffects[#ActiveEffects+1] = aurSky
-    end
 
     ShaderState.Active = true
     ShaderState.CurrentName = shaderName
@@ -940,8 +912,7 @@ local MusicTracks = {
 }
 
 local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false, CustomName = nil }
-local MusicPlayBtn = nil
-local NowPlayingLabel = nil
+local MusicPlayBtn, NowPlayingLabel = nil, nil
 local MusicPlay = nil
 
 local function SetPlayBtnText(text)
@@ -957,8 +928,8 @@ local function MusicStop()
         MusicPlayer.Sound = nil
     end
     MusicPlayer.Paused = false
-    pcall(function() NowPlayingLabel:SetText("🎵 Трек не играет") end)
     SetPlayBtnText("▶")
+    pcall(function() NowPlayingLabel:SetText("🎵 Трек не играет") end)
 end
 PulsarMusicStop = MusicStop
 
@@ -1171,6 +1142,52 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
         end
     end,
 })
+
+local FogGroup = VisualTab:AddLeftGroupbox("Туман")
+local FogState = { On = false, Density = 5, Saved = false, Color = Color3.fromRGB(200, 200, 200), OldStart = 0, OldEnd = 100000, OldColor = Color3.new(1, 1, 1) }
+local function FogApply()
+    if not FogState.Saved then
+        FogState.Saved = true
+        FogState.OldStart, FogState.OldEnd, FogState.OldColor = Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor
+    end
+    pcall(function()
+        Lighting.FogStart = 0
+        Lighting.FogEnd = 5000 - FogState.Density * 490
+        Lighting.FogColor = FogState.Color
+    end)
+end
+local function FogRestore()
+    if not FogState.Saved then return end
+    FogState.Saved = false
+    pcall(function()
+        Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor = FogState.OldStart, FogState.OldEnd, FogState.OldColor
+    end)
+end
+local FogToggle = FogGroup:AddToggle("PulsarFogOn", {
+    Text = "Туман",
+    Default = false,
+    Callback = function(on)
+        FogState.On = on
+        if on then FogApply() else FogRestore() end
+    end,
+})
+pcall(function()
+    FogToggle:AddColorPicker("PulsarFogColor", {
+        Default = FogState.Color, Title = "Цвет тумана",
+        Callback = function(v)
+            FogState.Color = v
+            if FogState.On then FogApply() end
+        end,
+    })
+end)
+FogGroup:AddSlider("PulsarFogDensity", {
+    Text = "Плотность", Default = 5, Min = 0, Max = 10, Rounding = 1,
+    Callback = function(v)
+        FogState.Density = v
+        if FogState.On then FogApply() end
+    end,
+})
+pcall(function() Library:OnUnload(FogRestore) end)
 
 -- =====================================================================
 -- ЗВУКИ (правая колонка вкладки Visual) — категории Mute
