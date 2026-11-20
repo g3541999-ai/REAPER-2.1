@@ -14,8 +14,8 @@ LockGui.IgnoreGuiInset = true
 LockGui.Enabled = false
 
 local LockButton = Instance.new("TextButton")
-LockButton.Position = UDim2.new(0.5, -145, 0, 10)
-LockButton.Size = UDim2.fromOffset(290, 36)
+LockButton.Position = UDim2.new(0.5, -130, 0, 8)
+LockButton.Size = UDim2.fromOffset(260, 18)
 LockButton.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 LockButton.BackgroundTransparency = 0
 LockButton.BorderSizePixel = 0
@@ -24,18 +24,18 @@ LockButton.AutoButtonColor = false
 LockButton.Parent = LockGui
 
 local LockLabel = Instance.new("TextLabel")
-LockLabel.Size = UDim2.new(1, -20, 1, 0)
-LockLabel.Position = UDim2.fromOffset(10, 0)
+LockLabel.Size = UDim2.new(1, -16, 1, 0)
+LockLabel.Position = UDim2.fromOffset(8, 0)
 LockLabel.BackgroundTransparency = 1
 LockLabel.Text = "PULSAR 2.3 | FPS: 0 || Пинг: 0 мс"
 LockLabel.TextColor3 = Color3.new(1, 1, 1)
 LockLabel.Font = Enum.Font.Gotham
-LockLabel.TextSize = 12
+LockLabel.TextSize = 10
 LockLabel.TextXAlignment = Enum.TextXAlignment.Left
 LockLabel.Parent = LockButton
 
 local LockCorner = Instance.new("UICorner")
-LockCorner.CornerRadius = UDim.new(0, 8)
+LockCorner.CornerRadius = UDim.new(0, 6)
 LockCorner.Parent = LockButton
 
 local LockStroke = Instance.new("UIStroke")
@@ -958,9 +958,9 @@ MusicPlayBtn = PlayBtn
 local PrevBtn = PlayBtn:AddButton({ Text = "<<", Func = function() MusicSkip(-1) end })
 local NextBtn = PlayBtn:AddButton({ Text = ">>", Func = function() MusicSkip(1) end })
 
-PrevBtn.Base.LayoutOrder = 0
-PlayBtn.Base.LayoutOrder = 1
-NextBtn.Base.LayoutOrder = 2
+pcall(function() PrevBtn.Base.LayoutOrder = 0 end)
+pcall(function() PlayBtn.Base.LayoutOrder = 1 end)
+pcall(function() NextBtn.Base.LayoutOrder = 2 end)
 
 for _, btn in ipairs({ PlayBtn, PrevBtn, NextBtn }) do
     pcall(function()
@@ -1118,116 +1118,6 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
         end
     end,
 })
-
--- АНИМЕ НЕБО (КУБ): 4 стены + потолок 3500x3500x3500, ставится ОДИН РАЗ при включении
--- на месте игрока и НЕ двигается. Работает и с ID-декалями (через SurfaceGui).
-local CubeSkyQuick = {
-    ["🐱 Аниме кошкодевочка"] = 1051301909,
-    ["🌸 Кавай с цветами"] = 5923420036,
-    ["🖤 Чёрно-белое аниме"] = 6357863121,
-    ["🤖 Кибер-киса"] = 14433437105,
-}
-local CubeSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 Кавай с цветами", "🖤 Чёрно-белое аниме", "🤖 Кибер-киса" }
-
-local CubeSkyState = { Model = nil }
-
-local CubeSkyWalls = {
-    { Name = "FrontWall", Size = Vector3.new(3500, 3500, 2), Off = Vector3.new(0, 0, -1750), Face = Enum.NormalId.Back },
-    { Name = "BackWall",  Size = Vector3.new(3500, 3500, 2), Off = Vector3.new(0, 0, 1750),  Face = Enum.NormalId.Front },
-    { Name = "LeftWall",  Size = Vector3.new(2, 3500, 3500), Off = Vector3.new(-1750, 0, 0), Face = Enum.NormalId.Right },
-    { Name = "RightWall", Size = Vector3.new(2, 3500, 3500), Off = Vector3.new(1750, 0, 0),  Face = Enum.NormalId.Left },
-    { Name = "Ceiling",   Size = Vector3.new(3500, 2, 3500), Off = Vector3.new(0, 1750, 0),  Face = Enum.NormalId.Bottom },
-}
-
-local function CubeSkyRemove()
-    if CubeSkyState.Model then
-        pcall(function() CubeSkyState.Model:Destroy() end)
-        CubeSkyState.Model = nil
-    end
-end
-
-local function CubeSkyBuild(id)
-    CubeSkyRemove()
-    local cam = workspace.CurrentCamera
-    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local pos = (root and root.Position) or (cam and cam.CFrame.Position)
-    if not pos then return end
-    local model = Instance.new("Model")
-    model.Name = "PulsarSkyCube"
-    for _, w in ipairs(CubeSkyWalls) do
-        local p = Instance.new("Part")
-        p.Name = w.Name
-        p.Anchored = true
-        p.CanCollide = false
-        p.CanQuery = false
-        p.CanTouch = false
-        p.CastShadow = false
-        p.Transparency = 1
-        p.Size = w.Size
-        local sg = Instance.new("SurfaceGui")
-        sg.Name = "SkyImage"
-        sg.Face = w.Face
-        sg.LightInfluence = 0
-        sg.Brightness = 2
-        sg.Parent = p
-        local img = Instance.new("ImageLabel")
-        img.BackgroundTransparency = 1
-        img.Size = UDim2.fromScale(1, 1)
-        img.Image = "rbxthumb://type=Asset&w=420&h=420&id=" .. id
-        img.Parent = sg
-        p.CFrame = CFrame.new(pos) * CFrame.new(w.Off)
-        p.Parent = model
-    end
-    model.Parent = workspace
-    CubeSkyState.Model = model
-end
-
-local CubeSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо (куб)")
-
-CubeSkyGroup:AddDropdown("PulsarCubeSkyQuick", {
-    Values = CubeSkyQuickOrder,
-    Default = 1,
-    Multi = false,
-    Text = "Картинка",
-    Callback = function() end,
-})
-
-CubeSkyGroup:AddInput("PulsarCubeSkyId", {
-    Text = "Свой ID (по желанию)",
-    Placeholder = "ID картинки или декали…",
-})
-
-CubeSkyGroup:AddToggle("PulsarCubeSkyOn", {
-    Text = "Включить куб с картинкой",
-    Default = false,
-    Callback = function(on)
-        if on then
-            local raw = ""
-            pcall(function() raw = tostring(Library.Options.PulsarCubeSkyId.Value or "") end)
-            local id = tonumber((raw:match("%d+") or ""))
-            if not id then
-                local quickName = nil
-                pcall(function() quickName = Library.Options.PulsarCubeSkyQuick.Value end)
-                id = CubeSkyQuick[quickName or ""]
-            end
-            if not id then
-                Library:Notify("Выбери Картинку или вставь Свой ID")
-                pcall(function() Library.Options.PulsarCubeSkyOn:SetValue(false) end)
-                return
-            end
-            CubeSkyBuild(id)
-            Library:Notify("Куб поставлен — стоит на месте (ID: " .. id .. ")")
-        else
-            CubeSkyRemove()
-            Library:Notify("Куб убран")
-        end
-    end,
-})
-
-PulsarCustomSkyOff = function()
-    pcall(CustomSkyRemove)
-    pcall(CubeSkyRemove)
-end
 
 local FogGroup = VisualTab:AddLeftGroupbox("Туман")
 local FogState = { On = false, Density = 5, Saved = false, Color = Color3.fromRGB(200, 200, 200), OldStart = 0, OldEnd = 100000, OldColor = Color3.new(1, 1, 1) }
@@ -2070,9 +1960,11 @@ do
     end
 
     local function ChatSend()
-        local nick = ChatClean(Library.Options.PulsarChatNick.Value)
+        local nick = ""
+        pcall(function() nick = tostring(Library.Options.PulsarChatNick.Value or "") end)
         if nick == "" then nick = "guest" end
-        local text = ChatClean(Library.Options.PulsarChatMsg.Value)
+        local text = ""
+        pcall(function() text = tostring(Library.Options.PulsarChatMsg.Value or "") end)
         if text == "" then
             Library:Notify("Введи сообщение")
             return
@@ -2139,5 +2031,5 @@ do
 end
 
 -- =====================================================================
--- ВКЛАДКА PLAYER — пустая (все функции удалены)
+-- ВКЛАДКА PLAYER (пустая — все функции удалены)
 -- =====================================================================
