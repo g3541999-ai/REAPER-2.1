@@ -1017,110 +1017,104 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 })
 
 -- =====================================================================
--- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — 4 стены + потолок
+-- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — настоящее небо через Sky
 -- =====================================================================
-local CustomSkyQuick = {
-    ["🐱 Аниме кошкодевочка"] = 1051301909,
-    ["🌸 Кавай с цветами"] = 5923420036,
-    ["🖤 Чёрно-белое аниме"] = 6357863121,
-    ["🤖 Кибер-киса"] = 14433437105,
+-- Настоящее небо: объект Sky (рисуется «на бесконечности») — вся карта видна всегда,
+-- ничего не двигается. Только ID-КАРТИНКИ (Image), декали в Sky не показываются.
+local CustomSkySets = {
+    ["☁️ Голубые облака"] = { Bk = 225469345, Dn = 225469349, Ft = 225469359, Lf = 225469364, Rt = 225469372, Up = 225469380 },
+    ["🌇 Закат с холмами"] = { Bk = 92464172, Dn = 92464250, Ft = 92464217, Lf = 92464234, Rt = 92464189, Up = 92464157 },
 }
-local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 Кавай с цветами", "🖤 Чёрно-белое аниме", "🤖 Кибер-киса" }
+local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами" }
 
-local CustomSkyState = { Model = nil }
-
--- Куб 500x500x500 ставится ОДИН РАЗ при включении (на месте игрока) и НЕ двигается.
--- 4 стены + потолок, пола нет. Off = сдвиг части от центра куба, Face = сторона (лицом внутрь).
-local CustomSkyWalls = {
-    { Name = "FrontWall", Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, -250), Face = Enum.NormalId.Back },
-    { Name = "BackWall",  Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, 250),  Face = Enum.NormalId.Front },
-    { Name = "LeftWall",  Size = Vector3.new(2, 500, 500), Off = Vector3.new(-250, 0, 0), Face = Enum.NormalId.Right },
-    { Name = "RightWall", Size = Vector3.new(2, 500, 500), Off = Vector3.new(250, 0, 0),  Face = Enum.NormalId.Left },
-    { Name = "Ceiling",   Size = Vector3.new(500, 2, 500), Off = Vector3.new(0, 250, 0),  Face = Enum.NormalId.Bottom },
-}
+local CustomSkyState = { Sky = nil, Backup = nil }
 
 local function CustomSkyRemove()
-    if CustomSkyState.Model then
-        pcall(function() CustomSkyState.Model:Destroy() end)
-        CustomSkyState.Model = nil
+    if CustomSkyState.Sky then
+        pcall(function() CustomSkyState.Sky:Destroy() end)
+        CustomSkyState.Sky = nil
+    end
+    local backup = CustomSkyState.Backup
+    CustomSkyState.Backup = nil
+    if backup then
+        pcall(function()
+            local sky = Instance.new("Sky")
+            sky.Name = "PulsarSkyRestored"
+            for k, v in pairs(backup) do sky[k] = v end
+            sky.Parent = Lighting
+        end)
     end
 end
 PulsarCustomSkyOff = CustomSkyRemove
 
-local function CustomSkyBuild(id)
+local function CustomSkyApply(faces)
+    if not faces then return end
     CustomSkyRemove()
-    local cam = workspace.CurrentCamera
-    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local pos = (root and root.Position) or (cam and cam.CFrame.Position)
-    if not pos then return end
-    local model = Instance.new("Model")
-    model.Name = "PulsarSkyCube"
-    for _, w in ipairs(CustomSkyWalls) do
-        local p = Instance.new("Part")
-        p.Name = w.Name
-        p.Anchored = true
-        p.CanCollide = false
-        p.CanQuery = false
-        p.CanTouch = false
-        p.CastShadow = false
-        p.Transparency = 1
-        p.Size = w.Size
-        local sg = Instance.new("SurfaceGui")
-        sg.Name = "SkyImage"
-        sg.Face = w.Face
-        sg.LightInfluence = 0
-        sg.Brightness = 2
-        sg.Parent = p
-        local img = Instance.new("ImageLabel")
-        img.BackgroundTransparency = 1
-        img.Size = UDim2.fromScale(1, 1)
-        img.Image = "rbxthumb://type=Asset&w=420&h=420&id=" .. id
-        img.Parent = sg
-        p.CFrame = CFrame.new(pos) * CFrame.new(w.Off)
-        p.Parent = model
-    end
-    model.Parent = workspace
-    CustomSkyState.Model = model
+    pcall(function()
+        local old = Lighting:FindFirstChildOfClass("Sky")
+        if old then
+            CustomSkyState.Backup = {
+                SkyboxBk = old.SkyboxBk, SkyboxDn = old.SkyboxDn, SkyboxFt = old.SkyboxFt,
+                SkyboxLf = old.SkyboxLf, SkyboxRt = old.SkyboxRt, SkyboxUp = old.SkyboxUp,
+                StarCount = old.StarCount, SunAngularSize = old.SunAngularSize,
+            }
+            old:Destroy()
+        end
+    end)
+    local sky = Instance.new("Sky")
+    sky.Name = "PulsarCustomSky"
+    sky.CelestialBodiesShown = false
+    sky.SkyboxBk = "rbxassetid://" .. faces.Bk
+    sky.SkyboxDn = "rbxassetid://" .. faces.Dn
+    sky.SkyboxFt = "rbxassetid://" .. faces.Ft
+    sky.SkyboxLf = "rbxassetid://" .. faces.Lf
+    sky.SkyboxRt = "rbxassetid://" .. faces.Rt
+    sky.SkyboxUp = "rbxassetid://" .. faces.Up
+    sky.Parent = Lighting
+    CustomSkyState.Sky = sky
 end
 
-local CustomSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
+local CustomSkyGroup = VisualTab:AddLeftGroupbox("Настоящее небо")
 
 CustomSkyGroup:AddDropdown("PulsarCustomSkyQuick", {
-    Values = CustomSkyQuickOrder,
+    Values = CustomSkyOrder,
     Default = 1,
     Multi = false,
-    Text = "Картинка",
+    Text = "Набор неба",
     Callback = function() end,
 })
 
 CustomSkyGroup:AddInput("PulsarCustomSkyId", {
     Text = "Свой ID (по желанию)",
-    Placeholder = "Вставь ID…",
+    Placeholder = "ID КАРТИНКИ (не декали)…",
 })
 
 CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
-    Text = "Включить аниме небо",
+    Text = "Включить небо",
     Default = false,
     Callback = function(on)
         if on then
+            local faces = nil
             local raw = ""
             pcall(function() raw = tostring(Library.Options.PulsarCustomSkyId.Value or "") end)
             local id = tonumber((raw:match("%d+") or ""))
-            if not id then
-                local quickName = nil
-                pcall(function() quickName = Library.Options.PulsarCustomSkyQuick.Value end)
-                id = CustomSkyQuick[quickName or ""]
+            if id then
+                faces = { Bk = id, Dn = id, Ft = id, Lf = id, Rt = id, Up = id }
+            else
+                local setName = nil
+                pcall(function() setName = Library.Options.PulsarCustomSkyQuick.Value end)
+                faces = CustomSkySets[setName or ""]
             end
-            if not id then
-                Library:Notify("Выбери Картинку сверху или вставь Свой ID")
+            if not faces then
+                Library:Notify("Выбери Набор неба или вставь ID КАРТИНКИ (не декали)")
                 pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
                 return
             end
-            CustomSkyBuild(id)
-            Library:Notify("Куб с небом поставлен (ID: " .. id .. ")")
+            CustomSkyApply(faces)
+            Library:Notify("Небо поставлено — вся карта видна")
         else
             CustomSkyRemove()
-            Library:Notify("Небо возвращено как было")
+            Library:Notify("Своё прежнее небо возвращено")
         end
     end,
 })
