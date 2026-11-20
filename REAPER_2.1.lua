@@ -408,7 +408,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 13")
-StatsGroup:AddLabel("Шейдеров: 14")
+StatsGroup:AddLabel("Шейдеров: 10")
 local PlayersLabel = StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -613,12 +613,33 @@ local ShaderPresets = {
         SunRays={Intensity=0.18,Spread=0.9},
         Atmosphere={Density=0.32,Offset=0.15,Haze=1.4,Glare=0.35,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
     },
-    ["Night"] = {
-        Lighting = { Brightness=0.8, ClockTime=0, FogEnd=100000, ExposureCompensation=-0.22, ShadowSoftness=0.7, Ambient=Color3.fromRGB(29,29,33) },
-        Bloom={Intensity=0.8,Threshold=0.78,Size=38},
-        ColorCorrection={Brightness=-0.08,Saturation=-0.15,Contrast=0.37,TintColor=Color3.fromRGB(185,205,255)},
-        SunRays={Intensity=0,Spread=0.65},
-        Atmosphere={Density=0.5,Offset=0.15,Haze=2.25,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
+    ["Кино-Закат"] = {
+        Lighting = { Brightness=2.0, ClockTime=17.5, FogEnd=8000, FogColor=Color3.fromRGB(255,180,120), ExposureCompensation=0.06, ShadowSoftness=0.7, Ambient=Color3.fromRGB(70,55,45), OutdoorAmbient=Color3.fromRGB(170,130,100), ColorShift_Top=Color3.fromRGB(255,190,130) },
+        Bloom={Intensity=0.6,Threshold=0.85,Size=55},
+        ColorCorrection={Brightness=0.03,Saturation=0.18,Contrast=0.28,TintColor=Color3.fromRGB(255,215,170)},
+        SunRays={Intensity=0.2,Spread=0.9},
+        Atmosphere={Density=0.3,Offset=0.15,Haze=1.8,Glare=0.4,Color=Color3.fromRGB(255,200,160),Decay=Color3.fromRGB(180,120,90)},
+    },
+    ["Неоновый город"] = {
+        Lighting = { Brightness=2.1, ClockTime=21, FogEnd=2500, FogStart=0, FogColor=Color3.fromRGB(60,20,90), ExposureCompensation=0.1, ShadowSoftness=0.4, Ambient=Color3.fromRGB(45,30,70), OutdoorAmbient=Color3.fromRGB(90,60,130), ColorShift_Bottom=Color3.fromRGB(80,0,120), ColorShift_Top=Color3.fromRGB(120,180,255) },
+        Bloom={Intensity=1.0,Threshold=0.7,Size=65},
+        ColorCorrection={Brightness=-0.02,Saturation=0.4,Contrast=0.4,TintColor=Color3.fromRGB(220,200,255)},
+        SunRays={Intensity=0.05,Spread=0.6},
+        Atmosphere={Density=0.4,Offset=0.15,Haze=2.2,Glare=0.35,Color=Color3.fromRGB(255,120,220),Decay=Color3.fromRGB(80,90,180)},
+    },
+    ["Северное сияние"] = {
+        Lighting = { Brightness=1.4, ClockTime=0.5, FogEnd=12000, ExposureCompensation=0.05, ShadowSoftness=0.8, Ambient=Color3.fromRGB(35,45,60), OutdoorAmbient=Color3.fromRGB(90,120,130), ColorShift_Top=Color3.fromRGB(120,255,200) },
+        Bloom={Intensity=0.7,Threshold=0.72,Size=58},
+        ColorCorrection={Brightness=0.02,Saturation=0.1,Contrast=0.2,TintColor=Color3.fromRGB(210,240,230)},
+        SunRays={Intensity=0,Spread=0.6},
+        Atmosphere={Density=0.32,Offset=0.15,Haze=1.6,Glare=0.25,Color=Color3.fromRGB(130,255,200),Decay=Color3.fromRGB(90,140,160)},
+    },
+    ["Туманное утро"] = {
+        Lighting = { Brightness=1.9, ClockTime=7.5, FogEnd=4000, FogStart=0, FogColor=Color3.fromRGB(215,220,228), ExposureCompensation=0.02, ShadowSoftness=0.85, Ambient=Color3.fromRGB(95,98,105), OutdoorAmbient=Color3.fromRGB(175,180,190), ColorShift_Top=Color3.fromRGB(240,240,248) },
+        Bloom={Intensity=0.35,Threshold=0.88,Size=42},
+        ColorCorrection={Brightness=0.02,Saturation=-0.05,Contrast=0.12,TintColor=Color3.fromRGB(240,242,246)},
+        SunRays={Intensity=0.08,Spread=0.7},
+        Atmosphere={Density=0.38,Offset=0.12,Haze=2.0,Glare=0.2,Color=Color3.fromRGB(225,230,240),Decay=Color3.fromRGB(160,165,180)},
     },
     ["Dreamy"] = {
         Lighting = { Brightness=2, ClockTime=16.8, FogEnd=100000, ExposureCompensation=0.08, ShadowSoftness=0.9, Ambient=Color3.fromRGB(61,61,68) },
@@ -627,13 +648,6 @@ local ShaderPresets = {
         SunRays={Intensity=0.08,Spread=0.65},
         Atmosphere={Density=0.28,Offset=0.15,Haze=1.4,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
     },
-    ["Colorful"] = {
-        Lighting = { Brightness=2.25, ClockTime=13.5, FogEnd=100000, ExposureCompensation=0.04, ShadowSoftness=0.35, Ambient=Color3.fromRGB(51,51,57) },
-        Bloom={Intensity=0.5,Threshold=1.1,Size=34},
-        ColorCorrection={Brightness=0.04,Saturation=0.45,Contrast=0.27,TintColor=Color3.fromRGB(255,255,255)},
-        SunRays={Intensity=0.08,Spread=0.65},
-        Atmosphere={Density=0.18,Offset=0.15,Haze=0.6,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
-    },
     ["Синтвейв"] = {
         Lighting = { Brightness=2.3, ClockTime=18.3, FogEnd=3500, FogStart=0, FogColor=Color3.fromRGB(180,80,200), ExposureCompensation=0.15, ShadowSoftness=0.3, Ambient=Color3.fromRGB(90,40,120), ColorShift_Bottom=Color3.fromRGB(70,0,95), ColorShift_Top=Color3.fromRGB(255,110,230), OutdoorAmbient=Color3.fromRGB(150,60,140) },
         Bloom={Intensity=0.9,Threshold=0.75,Size=60},
@@ -641,54 +655,12 @@ local ShaderPresets = {
         SunRays={Intensity=0.12,Spread=0.7},
         Atmosphere={Density=0.35,Offset=0.15,Haze=2.0,Glare=0.3,Color=Color3.fromRGB(255,150,220),Decay=Color3.fromRGB(140,60,150)},
     },
-    ["Cotton Candy"] = {
-        Lighting = { Brightness=2.1, ClockTime=14.2, FogEnd=8000, ExposureCompensation=0.05, ShadowSoftness=0.5, Ambient=Color3.fromRGB(120,105,130), OutdoorAmbient=Color3.fromRGB(180,170,200), ColorShift_Bottom=Color3.fromRGB(170,200,255), ColorShift_Top=Color3.fromRGB(255,170,220) },
-        Bloom={Intensity=0.6,Threshold=0.72,Size=55},
-        ColorCorrection={Brightness=0.03,Saturation=0.3,Contrast=0.15,TintColor=Color3.fromRGB(255,225,245)},
-        SunRays={Intensity=0.08,Spread=0.7},
-        Atmosphere={Density=0.2,Offset=0.15,Haze=1.2,Glare=0.2,Color=Color3.fromRGB(255,200,235),Decay=Color3.fromRGB(180,150,200)},
-    },
-    ["Pastel Sky"] = {
-        Lighting = { Brightness=2.3, ClockTime=12, FogEnd=4000, FogColor=Color3.fromRGB(220,225,240), ExposureCompensation=0.03, ShadowSoftness=0.55, Ambient=Color3.fromRGB(90,90,100), OutdoorAmbient=Color3.fromRGB(160,160,175) },
-        Bloom={Intensity=0.35,Threshold=0.85,Size=40},
-        ColorCorrection={Brightness=0.04,Saturation=-0.08,Contrast=0.1,TintColor=Color3.fromRGB(245,242,255)},
-        SunRays={Intensity=0.1,Spread=0.7},
-        Atmosphere={Density=0.28,Offset=0.15,Haze=1.1,Glare=0.18,Color=Color3.fromRGB(225,225,245),Decay=Color3.fromRGB(150,155,180)},
-    },
-    ["Cherry Blossom"] = {
-        Lighting = { Brightness=2.15, ClockTime=15.3, FogEnd=7000, ExposureCompensation=0.06, ShadowSoftness=0.5, Ambient=Color3.fromRGB(95,65,80), OutdoorAmbient=Color3.fromRGB(185,150,165), ColorShift_Top=Color3.fromRGB(255,190,210) },
-        Bloom={Intensity=0.55,Threshold=0.75,Size=50},
-        ColorCorrection={Brightness=0.03,Saturation=0.22,Contrast=0.12,TintColor=Color3.fromRGB(255,222,232)},
-        SunRays={Intensity=0.12,Spread=0.75},
-        Atmosphere={Density=0.24,Offset=0.15,Haze=1.3,Glare=0.22,Color=Color3.fromRGB(255,205,225),Decay=Color3.fromRGB(190,140,160)},
-    },
-    ["Amber Dusk"] = {
-        Lighting = { Brightness=1.95, ClockTime=17.6, FogEnd=7000, ExposureCompensation=0.02, ShadowSoftness=0.65, Ambient=Color3.fromRGB(80,68,52), OutdoorAmbient=Color3.fromRGB(160,140,115), ColorShift_Top=Color3.fromRGB(255,200,120) },
-        Bloom={Intensity=0.55,Threshold=0.78,Size=48},
-        ColorCorrection={Brightness=0.02,Saturation=0.2,Contrast=0.3,TintColor=Color3.fromRGB(255,212,160)},
-        SunRays={Intensity=0.16,Spread=0.85},
-        Atmosphere={Density=0.3,Offset=0.15,Haze=1.5,Glare=0.3,Color=Color3.fromRGB(255,215,160),Decay=Color3.fromRGB(160,125,90)},
-    },
     ["Lavender Fields"] = {
         Lighting = { Brightness=1.9, ClockTime=19, FogEnd=6000, FogColor=Color3.fromRGB(170,150,200), ExposureCompensation=0.04, ShadowSoftness=0.6, Ambient=Color3.fromRGB(75,65,100), OutdoorAmbient=Color3.fromRGB(140,125,170), ColorShift_Top=Color3.fromRGB(205,165,255) },
         Bloom={Intensity=0.6,Threshold=0.74,Size=52},
         ColorCorrection={Brightness=0.03,Saturation=0.2,Contrast=0.18,TintColor=Color3.fromRGB(232,218,255)},
         SunRays={Intensity=0.1,Spread=0.75},
         Atmosphere={Density=0.3,Offset=0.15,Haze=1.5,Glare=0.25,Color=Color3.fromRGB(215,195,255),Decay=Color3.fromRGB(140,110,180)},
-    },
-    ["Cursed Forest"] = {
-        Lighting = { Brightness=1.1, ClockTime=6.2, FogEnd=900, FogStart=0, FogColor=Color3.fromRGB(40,60,35), ExposureCompensation=-0.02, ShadowSoftness=0.75, Ambient=Color3.fromRGB(30,45,25), OutdoorAmbient=Color3.fromRGB(65,85,60), ColorShift_Bottom=Color3.fromRGB(15,30,12), ColorShift_Top=Color3.fromRGB(110,150,80) },
-        Bloom={Intensity=0.5,Threshold=0.7,Size=45},
-        ColorCorrection={Brightness=-0.03,Saturation=-0.05,Contrast=0.35,TintColor=Color3.fromRGB(220,245,205)},
-        SunRays={Intensity=0.05,Spread=0.6},
-        Atmosphere={Density=0.55,Offset=0.18,Haze=2.6,Glare=0.15,Color=Color3.fromRGB(120,160,100),Decay=Color3.fromRGB(50,75,45)},
-    },
-    ["Graveyard Fog"] = {
-        Lighting = { Brightness=1.3, ClockTime=5.8, FogEnd=500, FogStart=0, FogColor=Color3.fromRGB(150,155,165), ExposureCompensation=0, ShadowSoftness=0.8, Ambient=Color3.fromRGB(70,72,80), OutdoorAmbient=Color3.fromRGB(125,130,140), ColorShift_Bottom=Color3.fromRGB(90,95,105), ColorShift_Top=Color3.fromRGB(190,195,205) },
-        Bloom={Intensity=0.3,Threshold=0.8,Size=38},
-        ColorCorrection={Brightness=0,Saturation=-0.3,Contrast=0.25,TintColor=Color3.fromRGB(230,235,245)},
-        SunRays={Intensity=0.03,Spread=0.55},
-        Atmosphere={Density=0.7,Offset=0.15,Haze=3.0,Glare=0.15,Color=Color3.fromRGB(200,205,215),Decay=Color3.fromRGB(120,125,140)},
     },
     ["Slender"] = {
         Lighting = { Brightness=1.6, ClockTime=7, FogEnd=300, FogStart=0, FogColor=Color3.fromRGB(200,200,200), ExposureCompensation=0.05, ShadowSoftness=0.9, Ambient=Color3.fromRGB(140,140,140), OutdoorAmbient=Color3.fromRGB(175,175,175), ColorShift_Bottom=Color3.fromRGB(150,150,150), ColorShift_Top=Color3.fromRGB(215,215,215) },
@@ -699,7 +671,7 @@ local ShaderPresets = {
     },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Night", "Dreamy", "Colorful", "Синтвейв", "Cotton Candy", "Pastel Sky", "Cherry Blossom", "Amber Dusk", "Lavender Fields", "Cursed Forest", "Graveyard Fog", "Slender" }
+local ShaderOrder = { "Кино-Закат", "Неоновый город", "Северное сияние", "Туманное утро", "Scarlet Atmosphere", "Golden Hour", "Dreamy", "Синтвейв", "Lavender Fields", "Slender" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -968,7 +940,8 @@ local MusicTracks = {
 }
 
 local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false, CustomName = nil }
-local MusicPlayBtn, NowPlayingLabel = nil, nil
+local MusicPlayBtn = nil
+local NowPlayingLabel = nil
 local MusicPlay = nil
 
 local function SetPlayBtnText(text)
@@ -984,8 +957,8 @@ local function MusicStop()
         MusicPlayer.Sound = nil
     end
     MusicPlayer.Paused = false
-    SetPlayBtnText("▶")
     pcall(function() NowPlayingLabel:SetText("🎵 Трек не играет") end)
+    SetPlayBtnText("▶")
 end
 PulsarMusicStop = MusicStop
 
