@@ -14,8 +14,8 @@ LockGui.IgnoreGuiInset = true
 LockGui.Enabled = false
 
 local LockButton = Instance.new("TextButton")
-LockButton.Position = UDim2.new(0.5, -130, 0, 8)
-LockButton.Size = UDim2.fromOffset(260, 18)
+LockButton.Position = UDim2.new(0.5, -145, 0, 10)
+LockButton.Size = UDim2.fromOffset(290, 30)
 LockButton.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 LockButton.BackgroundTransparency = 0
 LockButton.BorderSizePixel = 0
@@ -24,18 +24,18 @@ LockButton.AutoButtonColor = false
 LockButton.Parent = LockGui
 
 local LockLabel = Instance.new("TextLabel")
-LockLabel.Size = UDim2.new(1, -16, 1, 0)
-LockLabel.Position = UDim2.fromOffset(8, 0)
+LockLabel.Size = UDim2.new(1, -20, 1, 0)
+LockLabel.Position = UDim2.fromOffset(10, 0)
 LockLabel.BackgroundTransparency = 1
 LockLabel.Text = "PULSAR 2.3 | FPS: 0 || Пинг: 0 мс"
 LockLabel.TextColor3 = Color3.new(1, 1, 1)
 LockLabel.Font = Enum.Font.Gotham
-LockLabel.TextSize = 10
+LockLabel.TextSize = 13
 LockLabel.TextXAlignment = Enum.TextXAlignment.Left
 LockLabel.Parent = LockButton
 
 local LockCorner = Instance.new("UICorner")
-LockCorner.CornerRadius = UDim.new(0, 6)
+LockCorner.CornerRadius = UDim.new(0, 8)
 LockCorner.Parent = LockButton
 
 local LockStroke = Instance.new("UIStroke")
@@ -1119,56 +1119,10 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
     end,
 })
 
-local FogGroup = VisualTab:AddLeftGroupbox("Туман")
-local FogState = { On = false, Density = 5, Saved = false, Color = Color3.fromRGB(200, 200, 200), OldStart = 0, OldEnd = 100000, OldColor = Color3.new(1, 1, 1) }
-local function FogApply()
-    if not FogState.Saved then
-        FogState.Saved = true
-        FogState.OldStart, FogState.OldEnd, FogState.OldColor = Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor
-    end
-    pcall(function()
-        Lighting.FogStart = 0
-        Lighting.FogEnd = 5000 - FogState.Density * 490
-        Lighting.FogColor = FogState.Color
-    end)
-end
-local function FogRestore()
-    if not FogState.Saved then return end
-    FogState.Saved = false
-    pcall(function()
-        Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor = FogState.OldStart, FogState.OldEnd, FogState.OldColor
-    end)
-end
-local FogToggle = FogGroup:AddToggle("PulsarFogOn", {
-    Text = "Туман",
-    Default = false,
-    Callback = function(on)
-        FogState.On = on
-        if on then FogApply() else FogRestore() end
-    end,
-})
-pcall(function()
-    FogToggle:AddColorPicker("PulsarFogColor", {
-        Default = FogState.Color, Title = "Цвет тумана",
-        Callback = function(v)
-            FogState.Color = v
-            if FogState.On then FogApply() end
-        end,
-    })
-end)
-FogGroup:AddSlider("PulsarFogDensity", {
-    Text = "Плотность", Default = 5, Min = 0, Max = 10, Rounding = 1,
-    Callback = function(v)
-        FogState.Density = v
-        if FogState.On then FogApply() end
-    end,
-})
-pcall(function() Library:OnUnload(FogRestore) end)
-
 -- =====================================================================
--- ЗВУКИ (правая колонка вкладки Visual) — категории Mute
+-- ЗВУКИ (вкладка Music, правая колонка) — категории Mute
 -- =====================================================================
-local SoundMuteCatGroup = VisualTab:AddRightGroupbox("Звуки")
+local SoundMuteCatGroup = TabObjects["Music"]:AddRightGroupbox("Звуки")
 local MuteSoundConn = nil
 local MutedOriginals = {}
 
@@ -1348,7 +1302,7 @@ for _, cat in ipairs(SoundCategories) do
 end
 
 -- =====================================================================
--- VISUAL — GRAPHICS (скопировано с Resonance 2.9 — окно Graphics вкладки Visual)
+-- VISUAL — GRAPHICS (правая колонка вкладки Visual, где были Звуки)
 -- =====================================================================
 do
 
@@ -1648,10 +1602,10 @@ do
 
     local Graphics
     local okGraphics = pcall(function()
-        Graphics = VisualTab:AddLeftGroupbox("Graphics", "file-image")
+        Graphics = VisualTab:AddRightGroupbox("Graphics", "file-image")
     end)
     if not okGraphics or not Graphics then
-        Graphics = VisualTab:AddLeftGroupbox("Graphics")
+        Graphics = VisualTab:AddRightGroupbox("Graphics")
     end
 
     local function GfxDivider(name)
@@ -1808,6 +1762,55 @@ do
         table.clear(GfxState.RuntimeConnections)
     end
 end
+
+-- =====================================================================
+-- ТУМАН (вкладка Visual, правая колонка, под Graphics)
+-- =====================================================================
+local FogGroup = VisualTab:AddRightGroupbox("Туман")
+local FogState = { On = false, Density = 5, Saved = false, Color = Color3.fromRGB(200, 200, 200), OldStart = 0, OldEnd = 100000, OldColor = Color3.new(1, 1, 1) }
+local function FogApply()
+    if not FogState.Saved then
+        FogState.Saved = true
+        FogState.OldStart, FogState.OldEnd, FogState.OldColor = Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor
+    end
+    pcall(function()
+        Lighting.FogStart = 0
+        Lighting.FogEnd = 5000 - FogState.Density * 490
+        Lighting.FogColor = FogState.Color
+    end)
+end
+local function FogRestore()
+    if not FogState.Saved then return end
+    FogState.Saved = false
+    pcall(function()
+        Lighting.FogStart, Lighting.FogEnd, Lighting.FogColor = FogState.OldStart, FogState.OldEnd, FogState.OldColor
+    end)
+end
+local FogToggle = FogGroup:AddToggle("PulsarFogOn", {
+    Text = "Туман",
+    Default = false,
+    Callback = function(on)
+        FogState.On = on
+        if on then FogApply() else FogRestore() end
+    end,
+})
+pcall(function()
+    FogToggle:AddColorPicker("PulsarFogColor", {
+        Default = FogState.Color, Title = "Цвет тумана",
+        Callback = function(v)
+            FogState.Color = v
+            if FogState.On then FogApply() end
+        end,
+    })
+end)
+FogGroup:AddSlider("PulsarFogDensity", {
+    Text = "Плотность", Default = 5, Min = 0, Max = 10, Rounding = 1,
+    Callback = function(v)
+        FogState.Density = v
+        if FogState.On then FogApply() end
+    end,
+})
+pcall(function() Library:OnUnload(FogRestore) end)
 
 -- =====================================================================
 -- ВКЛАДКА LISTS — ЧАТ PULSAR (ntfy.sh): слева ввод, справа сообщения
