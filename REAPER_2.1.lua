@@ -1029,8 +1029,8 @@ local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 
 
 local CustomSkyState = { Model = nil, Conn = nil }
 
--- Куб 500x500x500 вокруг камеры: 4 стены + потолок, пола нет.
--- Off = сдвиг части относительно камеры, Face = сторона декали (лицом внутрь).
+-- Куб 500x500x500 следует ЗА ИГРОКОМ (только позиция, без вращений камеры): 4 стены + потолок, пола нет.
+-- Off = сдвиг части относительно игрока, Face = сторона декали (лицом внутрь).
 local CustomSkyWalls = {
     { Name = "FrontWall", Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, -250), Face = Enum.NormalId.Back },
     { Name = "BackWall",  Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, 250),  Face = Enum.NormalId.Front },
@@ -1084,16 +1084,17 @@ local function CustomSkyBuild(id)
     model.Parent = workspace
     CustomSkyState.Model = model
     local function Follow()
-        local c = workspace.CurrentCamera
-        if not c then return end
+        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local pos = root and root.Position or (cam and cam.CFrame.Position)
+        if not pos then return end
         for _, w in ipairs(CustomSkyWalls) do
             if w.Part and w.Part.Parent then
-                w.Part.CFrame = c.CFrame * CFrame.new(w.Off)
+                w.Part.CFrame = CFrame.new(pos) * CFrame.new(w.Off)
             end
         end
     end
     pcall(Follow)
-    CustomSkyState.Conn = cam:GetPropertyChangedSignal("CFrame"):Connect(Follow)
+    CustomSkyState.Conn = RunService.Heartbeat:Connect(Follow)
 end
 
 local CustomSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
