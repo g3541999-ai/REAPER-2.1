@@ -1017,7 +1017,7 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 })
 
 -- =====================================================================
--- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — куб размером с карту
+-- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — 4 стены + потолок
 -- =====================================================================
 local CustomSkyQuick = {
     ["🐱 Аниме кошкодевочка"] = 1051301909,
@@ -1027,10 +1027,10 @@ local CustomSkyQuick = {
 }
 local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 Кавай с цветами", "🖤 Чёрно-белое аниме", "🤖 Кибер-киса" }
 
-local CustomSkyState = { Model = nil, Conn = nil }
+local CustomSkyState = { Model = nil }
 
--- Куб следует ЗА ИГРОКОМ (только позиция, без вращений камеры): 4 стены + потолок, пола нет.
--- Off = сдвиг относительно игрока в базовом размере (полкуба 250), растягивается по размеру карты.
+-- Куб 500x500x500 ставится ОДИН РАЗ при включении (на месте игрока) и НЕ двигается.
+-- 4 стены + потолок, пола нет. Off = сдвиг части от центра куба, Face = сторона (лицом внутрь).
 local CustomSkyWalls = {
     { Name = "FrontWall", Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, -250), Face = Enum.NormalId.Back },
     { Name = "BackWall",  Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, 250),  Face = Enum.NormalId.Front },
@@ -1040,10 +1040,6 @@ local CustomSkyWalls = {
 }
 
 local function CustomSkyRemove()
-    if CustomSkyState.Conn then
-        pcall(function() CustomSkyState.Conn:Disconnect() end)
-        CustomSkyState.Conn = nil
-    end
     if CustomSkyState.Model then
         pcall(function() CustomSkyState.Model:Destroy() end)
         CustomSkyState.Model = nil
@@ -1054,26 +1050,11 @@ PulsarCustomSkyOff = CustomSkyRemove
 local function CustomSkyBuild(id)
     CustomSkyRemove()
     local cam = workspace.CurrentCamera
-    if not cam then return end
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local pos = (root and root.Position) or (cam and cam.CFrame.Position)
+    if not pos then return end
     local model = Instance.new("Model")
     model.Name = "PulsarSkyCube"
-    local half = 250
-    pcall(function()
-        local maxDist = 0
-        local t0 = os.clock()
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and not obj:IsA("Terrain") then
-                local d = obj.Position.Magnitude + obj.Size.Magnitude * 0.5
-                if d > maxDist then maxDist = d end
-            end
-            if os.clock() - t0 > 0.1 then
-                task.wait()
-                t0 = os.clock()
-            end
-        end
-        if maxDist > 250 then half = math.min(math.ceil(maxDist + 500), 30000) end
-    end)
-    local k = half / 250
     for _, w in ipairs(CustomSkyWalls) do
         local p = Instance.new("Part")
         p.Name = w.Name
@@ -1083,7 +1064,7 @@ local function CustomSkyBuild(id)
         p.CanTouch = false
         p.CastShadow = false
         p.Transparency = 1
-        p.Size = w.Size * k
+        p.Size = w.Size
         local sg = Instance.new("SurfaceGui")
         sg.Name = "SkyImage"
         sg.Face = w.Face
@@ -1095,23 +1076,11 @@ local function CustomSkyBuild(id)
         img.Size = UDim2.fromScale(1, 1)
         img.Image = "rbxthumb://type=Asset&w=420&h=420&id=" .. id
         img.Parent = sg
+        p.CFrame = CFrame.new(pos) * CFrame.new(w.Off)
         p.Parent = model
-        w.Part = p
     end
     model.Parent = workspace
     CustomSkyState.Model = model
-    local function Follow()
-        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local pos = root and root.Position or (cam and cam.CFrame.Position)
-        if not pos then return end
-        for _, w in ipairs(CustomSkyWalls) do
-            if w.Part and w.Part.Parent then
-                w.Part.CFrame = CFrame.new(pos) * CFrame.new(w.Off * k)
-            end
-        end
-    end
-    pcall(Follow)
-    CustomSkyState.Conn = RunService.Heartbeat:Connect(Follow)
 end
 
 local CustomSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
