@@ -138,7 +138,6 @@ local Window = Library:CreateWindow({
 })
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() LockGui.Enabled = true end)
-pcall(function() Library:Notify("PULSAR 2.3 запущен. Привет, " .. LocalPlayer.Name) end)
 
 -- ПОИСК: квадратик 36x36 с лупой рядом с кнопкой перетаскивания панели, при клике разворачивается в строку
 local SearchCollapseSize = UDim2.fromOffset(36, 36)
