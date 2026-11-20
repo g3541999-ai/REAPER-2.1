@@ -409,7 +409,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 13")
 StatsGroup:AddLabel("Шейдеров: 14")
-StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
+local PlayersLabel = StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
     HomeGroup:AddImage("LocalAvatar", {
@@ -447,6 +447,11 @@ task.spawn(function()
         pcall(function() UptimeLabel:SetText(u) end)
         pcall(function() UptimeLabel.Text = u end)
         pcall(function() UptimeLabel.TextLabel.Text = u end)
+
+        local p = "Игроков в сервере: " .. #Players:GetPlayers()
+        pcall(function() PlayersLabel:SetText(p) end)
+        pcall(function() PlayersLabel.Text = p end)
+        pcall(function() PlayersLabel.TextLabel.Text = p end)
     end
 end)
 
@@ -962,8 +967,8 @@ local MusicTracks = {
     ["HYDERABADI PHONK (MARFA STYLE)"] = 140691985128867,
 }
 
-local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false }
-local MusicPlayBtn = nil
+local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false, CustomName = nil }
+local MusicPlayBtn, NowPlayingLabel = nil, nil
 local MusicPlay = nil
 
 local function SetPlayBtnText(text)
@@ -980,6 +985,7 @@ local function MusicStop()
     end
     MusicPlayer.Paused = false
     SetPlayBtnText("▶")
+    pcall(function() NowPlayingLabel:SetText("🎵 Трек не играет") end)
 end
 PulsarMusicStop = MusicStop
 
@@ -1021,6 +1027,7 @@ end
 
 function MusicPlay()
     MusicStop()
+    MusicPlayer.CustomName = nil
     local id = MusicTracks[MusicPlayer.Track]
     if not id then
         Library:Notify("Плейлист пуст — треки добавим позже")
@@ -1048,6 +1055,19 @@ end
 
 local MusicGroup = TabObjects["Music"]:AddLeftGroupbox("Плеер")
 
+NowPlayingLabel = MusicGroup:AddLabel("🎵 Трек не играет")
+task.spawn(function()
+    while not Library.Unloaded do
+        task.wait(1)
+        local s = MusicPlayer.Sound
+        if s and s.IsLoaded and NowPlayingLabel then
+            local pos, dur = math.floor(s.TimePosition + 0.5), math.floor(s.TimeLength + 0.5)
+            local txt = string.format("🎵 %s — %d:%02d / %d:%02d", MusicPlayer.CustomName or MusicPlayer.Track or "?", pos // 60, pos % 60, dur // 60, dur % 60)
+            pcall(function() NowPlayingLabel:SetText(txt) end)
+            pcall(function() NowPlayingLabel.TextLabel.Text = txt end)
+        end
+    end
+end)
 local MusicOrder = {}
 for name in pairs(MusicTracks) do
     MusicOrder[#MusicOrder + 1] = name
@@ -1078,6 +1098,41 @@ MusicGroup:AddSlider("PulsarMusicVolume", {
         if MusicPlayer.Sound then
             pcall(function() MusicPlayer.Sound.Volume = v / 50 end)
         end
+    end,
+})
+
+MusicGroup:AddInput("PulsarMusicCustomId", {
+    Text = "Свой трек (ID)",
+    Placeholder = "Вставь ID аудио…",
+})
+MusicGroup:AddButton({
+    Text = "🎵 Включить свой трек",
+    Func = function()
+        local raw = ""
+        pcall(function() raw = tostring(Library.Options.PulsarMusicCustomId.Value or "") end)
+        local id = tonumber((raw:match("%d+") or ""))
+        if not id then
+            Library:Notify("Вставь числовой ID аудио Roblox")
+            return
+        end
+        MusicStop()
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://" .. id
+        s.Volume = MusicPlayer.Volume / 50
+        s.Parent = SoundService
+        local t0 = os.clock()
+        while not s.IsLoaded and os.clock() - t0 < 5 do
+            task.wait(0.1)
+        end
+        if not s.IsLoaded or s.TimeLength == 0 then
+            pcall(function() s:Destroy() end)
+            Library:Notify("Трек не загрузился (закрыт или не существует)")
+            return
+        end
+        MusicPlayer.Sound, MusicPlayer.Paused = s, false
+        MusicPlayer.CustomName = "Свой трек (ID: " .. id .. ")"
+        s:Play()
+        SetPlayBtnText("| |")
     end,
 })
 
@@ -1931,6 +1986,13 @@ do
         Finished = false,
     })
 
+    local function ChatUrlEncode(text)
+        local out = tostring(text or ""):gsub("[^%w%-_%.~]", function(c)
+            return string.format("%%%02X", string.byte(c))
+        end)
+        return out
+    end
+
     local function ChatSend()
         local nick = ChatClean(Library.Options.PulsarChatNick.Value)
         if nick == "" then nick = "guest" end
@@ -1941,6 +2003,14 @@ do
         end
         local body = HttpService:JSONEncode({ topic = CHAT_TOPIC, title = nick, message = text })
         local ok, respBody = ChatHttpPost("https://ntfy.sh/", body)
+        if not ok then
+            local url = "https://ntfy.sh/" .. CHAT_TOPIC .. "/publish?title=" .. ChatUrlEncode(nick) .. "&message=" .. ChatUrlEncode(text)
+            local okG, gBody = ChatHttpGet(url)
+            if okG and type(gBody) == "string" and string.find(gBody, '"id"', 1, true) then
+                ok = true
+                respBody = gBody
+            end
+        end
         if ok then
             MarkSeen(respBody)
             ChatPush(nick, text)
