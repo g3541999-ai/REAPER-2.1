@@ -408,7 +408,7 @@ HotkeyGroup:AddLabel("Клавиша M — открыть/закрыть мен�
 
 local StatsGroup = TabObjects["Home"]:AddRightGroupbox("Статистика")
 StatsGroup:AddLabel("Вкладок: 13")
-StatsGroup:AddLabel("Шейдеров: 10")
+StatsGroup:AddLabel("Шейдеров: 8")
 local PlayersLabel = StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
 pcall(function()
@@ -613,26 +613,12 @@ local ShaderPresets = {
         SunRays={Intensity=0.18,Spread=0.9},
         Atmosphere={Density=0.32,Offset=0.15,Haze=1.4,Glare=0.35,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
     },
-    ["Кино-Закат"] = {
-        Lighting = { Brightness=2.0, ClockTime=17.5, FogEnd=8000, FogColor=Color3.fromRGB(255,180,120), ExposureCompensation=0.06, ShadowSoftness=0.7, Ambient=Color3.fromRGB(70,55,45), OutdoorAmbient=Color3.fromRGB(170,130,100), ColorShift_Top=Color3.fromRGB(255,190,130) },
-        Bloom={Intensity=0.6,Threshold=0.85,Size=55},
-        ColorCorrection={Brightness=0.03,Saturation=0.18,Contrast=0.28,TintColor=Color3.fromRGB(255,215,170)},
-        SunRays={Intensity=0.2,Spread=0.9},
-        Atmosphere={Density=0.3,Offset=0.15,Haze=1.8,Glare=0.4,Color=Color3.fromRGB(255,200,160),Decay=Color3.fromRGB(180,120,90)},
-    },
-    ["Неоновый город"] = {
-        Lighting = { Brightness=2.1, ClockTime=21, FogEnd=2500, FogStart=0, FogColor=Color3.fromRGB(60,20,90), ExposureCompensation=0.1, ShadowSoftness=0.4, Ambient=Color3.fromRGB(45,30,70), OutdoorAmbient=Color3.fromRGB(90,60,130), ColorShift_Bottom=Color3.fromRGB(80,0,120), ColorShift_Top=Color3.fromRGB(120,180,255) },
-        Bloom={Intensity=1.0,Threshold=0.7,Size=65},
-        ColorCorrection={Brightness=-0.02,Saturation=0.4,Contrast=0.4,TintColor=Color3.fromRGB(220,200,255)},
-        SunRays={Intensity=0.05,Spread=0.6},
-        Atmosphere={Density=0.4,Offset=0.15,Haze=2.2,Glare=0.35,Color=Color3.fromRGB(255,120,220),Decay=Color3.fromRGB(80,90,180)},
-    },
     ["Северное сияние"] = {
-        Lighting = { Brightness=1.4, ClockTime=0.5, FogEnd=12000, ExposureCompensation=0.05, ShadowSoftness=0.8, Ambient=Color3.fromRGB(35,45,60), OutdoorAmbient=Color3.fromRGB(90,120,130), ColorShift_Top=Color3.fromRGB(120,255,200) },
+        Lighting = { Brightness=1.4, ClockTime=0, FogEnd=12000, ExposureCompensation=0.05, ShadowSoftness=0.8, Ambient=Color3.fromRGB(35,45,60), OutdoorAmbient=Color3.fromRGB(90,120,130), ColorShift_Top=Color3.fromRGB(120,255,200) },
         Bloom={Intensity=0.7,Threshold=0.72,Size=58},
         ColorCorrection={Brightness=0.02,Saturation=0.1,Contrast=0.2,TintColor=Color3.fromRGB(210,240,230)},
         SunRays={Intensity=0,Spread=0.6},
-        Atmosphere={Density=0.32,Offset=0.15,Haze=1.6,Glare=0.25,Color=Color3.fromRGB(130,255,200),Decay=Color3.fromRGB(90,140,160)},
+        Atmosphere={Density=0.32,Offset=0.15,Haze=2.2,Glare=0.4,Color=Color3.fromRGB(130,255,200),Decay=Color3.fromRGB(90,140,160)},
     },
     ["Туманное утро"] = {
         Lighting = { Brightness=1.9, ClockTime=7.5, FogEnd=4000, FogStart=0, FogColor=Color3.fromRGB(215,220,228), ExposureCompensation=0.02, ShadowSoftness=0.85, Ambient=Color3.fromRGB(95,98,105), OutdoorAmbient=Color3.fromRGB(175,180,190), ColorShift_Top=Color3.fromRGB(240,240,248) },
@@ -671,7 +657,7 @@ local ShaderPresets = {
     },
 }
 
-local ShaderOrder = { "Кино-Закат", "Неоновый город", "Северное сияние", "Туманное утро", "Scarlet Atmosphere", "Golden Hour", "Dreamy", "Синтвейв", "Lavender Fields", "Slender" }
+local ShaderOrder = { "Северное сияние", "Туманное утро", "Scarlet Atmosphere", "Golden Hour", "Dreamy", "Синтвейв", "Lavender Fields", "Slender" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -837,6 +823,20 @@ local function ApplyShader(shaderName, level)
         swSky.SunAngularSize = 30
         swSky.StarCount = 1500
         ActiveEffects[#ActiveEffects+1] = swSky
+    end
+    if shaderName == "Северное сияние" then
+        local aurSky = Instance.new("Sky", Lighting)
+        aurSky.Name = "SavitarAuroraSky"
+        aurSky.SkyboxUp = "rbxassetid://323493360"
+        aurSky.SkyboxLf = "rbxassetid://323494252"
+        aurSky.SkyboxBk = "rbxassetid://323494035"
+        aurSky.SkyboxFt = "rbxassetid://323494130"
+        aurSky.SkyboxDn = "rbxassetid://323494368"
+        aurSky.SkyboxRt = "rbxassetid://323494067"
+        aurSky.SunAngularSize = 0
+        aurSky.MoonAngularSize = 0
+        aurSky.StarCount = 3000
+        ActiveEffects[#ActiveEffects+1] = aurSky
     end
 
     ShaderState.Active = true
