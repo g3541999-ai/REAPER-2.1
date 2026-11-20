@@ -1052,6 +1052,19 @@ local function CustomSkyRemove()
 end
 PulsarCustomSkyOff = CustomSkyRemove
 
+local function CustomSkyToImageId(id)
+    id = tonumber(id) or id
+    if CustomSkyImageCache[id] then return CustomSkyImageCache[id] end
+    local result = id
+    pcall(function()
+        local txt = game:HttpGet("https://assetdelivery.roblox.com/v1/asset/?id=" .. id)
+        local img = tostring(txt):match("rbxassetid://(%d+)")
+        if img then result = tonumber(img) end
+    end)
+    CustomSkyImageCache[id] = result
+    return result
+end
+
 local function CustomSkyPatch(patch)
     if not next(patch) then return end
     local sky = Lighting:FindFirstChildOfClass("Sky")
@@ -1075,24 +1088,38 @@ local function CustomSkyPatch(patch)
     CustomSkyState.Sky = sky
 end
 
-local function CustomSkyToImageId(id)
-    id = tonumber(id) or id
-    if CustomSkyImageCache[id] then return CustomSkyImageCache[id] end
-    local result = id
-    pcall(function()
-        local txt = game:HttpGet("https://assetdelivery.roblox.com/v1/asset/?id=" .. id)
-        local img = tostring(txt):match("rbxassetid://(%d+)")
-        if img then result = tonumber(img) end
-    end)
-    CustomSkyImageCache[id] = result
-    return result
-end
-
 local CustomSkyGroup = VisualTab:AddLeftGroupbox("Кастомное небо")
 
 CustomSkyGroup:AddInput("PulsarCustomSkyId", {
     Text = "ID картинки",
     Placeholder = "Вставь ID…",
+})
+
+CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
+    Text = "Включить кастомное небо",
+    Default = false,
+    Callback = function(on)
+        if on then
+            local raw = ""
+            pcall(function() raw = tostring(Library.Options.PulsarCustomSkyId.Value or "") end)
+            local id = tonumber((raw:match("%d+") or ""))
+            if not id then
+                local quickName = nil
+                pcall(function() quickName = Library.Options.PulsarCustomSkyQuick.Value end)
+                id = CustomSkyQuick[quickName or ""]
+            end
+            if not id then
+                Library:Notify("Вставь ID или выбери сверху в Быстром выборе")
+                pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
+                return
+            end
+            CustomSkyPatch({ SkyboxBk = id, SkyboxFt = id, SkyboxLf = id, SkyboxRt = id, SkyboxUp = id })
+            Library:Notify("Небо поставлено (ID: " .. id .. ")")
+        else
+            CustomSkyRemove()
+            Library:Notify("Небо возвращено как было")
+        end
+    end,
 })
 
 CustomSkyGroup:AddButton({
