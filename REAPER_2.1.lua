@@ -1132,10 +1132,10 @@ local CubeSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 К
 local CubeSkyState = { Model = nil }
 
 local CubeSkyWalls = {
-    { Name = "FrontWall", Size = Vector3.new(3004, 3000, 2), Off = Vector3.new(0, 0, -1500), Face = Enum.NormalId.Back },
-    { Name = "BackWall",  Size = Vector3.new(3004, 3000, 2), Off = Vector3.new(0, 0, 1500),  Face = Enum.NormalId.Front },
-    { Name = "LeftWall",  Size = Vector3.new(2, 3000, 3004), Off = Vector3.new(-1500, 0, 0), Face = Enum.NormalId.Right },
-    { Name = "RightWall", Size = Vector3.new(2, 3000, 3004), Off = Vector3.new(1500, 0, 0),  Face = Enum.NormalId.Left },
+    { Name = "FrontWall", Size = Vector3.new(3000, 3000, 2), Off = Vector3.new(0, 0, -1500), Face = Enum.NormalId.Back },
+    { Name = "BackWall",  Size = Vector3.new(3000, 3000, 2), Off = Vector3.new(0, 0, 1500),  Face = Enum.NormalId.Front },
+    { Name = "LeftWall",  Size = Vector3.new(2, 3000, 3000), Off = Vector3.new(-1500, 0, 0), Face = Enum.NormalId.Right },
+    { Name = "RightWall", Size = Vector3.new(2, 3000, 3000), Off = Vector3.new(1500, 0, 0),  Face = Enum.NormalId.Left },
     { Name = "Ceiling",   Size = Vector3.new(3000, 2, 3000), Off = Vector3.new(0, 1500, 0),  Face = Enum.NormalId.Bottom },
 }
 
