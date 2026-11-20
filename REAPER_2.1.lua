@@ -1017,20 +1017,20 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 })
 
 -- =====================================================================
--- АНИМЕ НЕБО (левая колонка, под Shaders) — пресеты + свой ID
+-- АНИМЕ НЕБО (левая колонка, под Shaders) — 6 панельное, пресеты + своя панель
 -- =====================================================================
 local AnimeSkyPresets = {
-    ["Аниме классика"] = { 21076888, 21076945, 21077007, 21077125 },
-    ["Аниме микс (8 тян)"] = { 21076888, 21076945, 21077007, 21077125, 77142077267813, 119917938436254, 120668168370087, 105189455817751 },
+    ["Аниме набор 1"] = { 21076888, 21076945, 21077007, 21077125, 77142077267813, 119917938436254 },
+    ["Аниме набор 2"] = { 120668168370087, 105189455817751, 21077007, 21076945, 21077125, 21076888 },
 }
-local AnimeSkyOrder = { "Аниме классика", "Аниме микс (8 тян)" }
+local AnimeSkyOrder = { "Аниме набор 1", "Аниме набор 2" }
 
-local AnimeSkyPanelCount = 8
+local AnimeSkyPanelCount = 6
 local AnimeSkyRadius = 2500
-local AnimeSkyWidth = 1963
+local AnimeSkyWidth = 1500
 local AnimeSkyHeight = 2048
 
-local AnimeSkyState = { Parts = nil, Conn = nil }
+local AnimeSkyState = { Parts = nil, Conn = nil, Ids = {} }
 
 local function AnimeSkyRemove()
     if AnimeSkyState.Conn then
@@ -1045,10 +1045,10 @@ local function AnimeSkyRemove()
     end
 end
 
-local function AnimeSkyApply(idList)
+local function AnimeSkyApply()
     AnimeSkyRemove()
     local camera = workspace.CurrentCamera
-    if not (camera and type(idList) == "table" and #idList > 0) then return end
+    if not (camera and #AnimeSkyState.Ids > 0) then return end
     local base = camera.CFrame.Position
     local n = AnimeSkyPanelCount
     local parts = {}
@@ -1065,10 +1065,13 @@ local function AnimeSkyApply(idList)
         p.CanTouch = false
         p.CastShadow = false
         p.CFrame = CFrame.lookAt(base + dir * AnimeSkyRadius, base)
-        local decal = Instance.new("Decal")
-        decal.Face = Enum.NormalId.Front
-        decal.Texture = "rbxassetid://" .. idList[((i - 1) % #idList) + 1]
-        decal.Parent = p
+        local id = AnimeSkyState.Ids[((i - 1) % #AnimeSkyState.Ids) + 1]
+        if id then
+            local decal = Instance.new("Decal")
+            decal.Face = Enum.NormalId.Front
+            decal.Texture = "rbxassetid://" .. id
+            decal.Parent = p
+        end
         p.Parent = workspace
         parts[i] = p
     end
@@ -1084,32 +1087,91 @@ local function AnimeSkyApply(idList)
         end
     end)
 end
+
+local function AnimeSkyLoadPreset(name)
+    local list = AnimeSkyPresets[name]
+    if not list then return end
+    AnimeSkyState.Ids = {}
+    for i = 1, AnimeSkyPanelCount do
+        AnimeSkyState.Ids[i] = list[((i - 1) % #list) + 1]
+    end
+end
+
+local function AnimeSkySetPanel(index, id)
+    if type(index) ~= "number" or index < 1 or index > AnimeSkyPanelCount then return end
+    AnimeSkyState.Ids[index] = id
+    pcall(function()
+        if Library.Options.PulsarAnimeSkyOn.Value then
+            AnimeSkyApply()
+        end
+    end)
+end
 PulsarAnimeSkyOff = AnimeSkyRemove
 
 local AnimeSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
 
 local AnimeSkyCurrent = AnimeSkyOrder[1]
+AnimeSkyLoadPreset(AnimeSkyCurrent)
 
 AnimeSkyGroup:AddDropdown("PulsarAnimeSkyPreset", {
     Values = AnimeSkyOrder,
     Default = 1,
     Multi = false,
-    Text = "Пресет",
+    Text = "Пресет (набор тян)",
     Callback = function(v)
         if AnimeSkyPresets[v] then
             AnimeSkyCurrent = v
+            AnimeSkyLoadPreset(v)
             pcall(function()
                 if Library.Options.PulsarAnimeSkyOn.Value then
-                    AnimeSkyApply(AnimeSkyPresets[v])
+                    AnimeSkyApply()
                 end
             end)
         end
     end,
 })
 
-AnimeSkyGroup:AddInput("PulsarAnimeSkyCustomId", {
-    Text = "Свой ID картинки",
+AnimeSkyGroup:AddDropdown("PulsarAnimeSkyPanel", {
+    Values = { "Панель 1", "Панель 2", "Панель 3", "Панель 4", "Панель 5", "Панель 6" },
+    Default = 1,
+    Multi = false,
+    Text = "Куда поставить",
+    Callback = function() end,
+})
+
+AnimeSkyGroup:AddInput("PulsarAnimeSkyPanelId", {
+    Text = "ID для панели",
     Placeholder = "Вставь ID…",
+})
+
+AnimeSkyGroup:AddButton({
+    Text = "🖼 Поставить на панель",
+    Func = function()
+        local raw, panel = "", nil
+        pcall(function() raw = tostring(Library.Options.PulsarAnimeSkyPanelId.Value or "") end)
+        pcall(function() panel = Library.Options.PulsarAnimeSkyPanel.Value end)
+        local id = tonumber((raw:match("%d+") or ""))
+        local idx = tonumber((tostring(panel or ""):match("%d+") or ""))
+        if not id then
+            Library:Notify("Вставь ID картинки выше")
+            return
+        end
+        AnimeSkySetPanel(idx or 1, id)
+        Library:Notify("Панель " .. (idx or 1) .. ": картинка поставлена")
+    end,
+})
+
+AnimeSkyGroup:AddButton({
+    Text = "🧹 Вернуть пресет",
+    Func = function()
+        AnimeSkyLoadPreset(AnimeSkyCurrent)
+        pcall(function()
+            if Library.Options.PulsarAnimeSkyOn.Value then
+                AnimeSkyApply()
+            end
+        end)
+        Library:Notify("Панели сброшены на пресет")
+    end,
 })
 
 AnimeSkyGroup:AddToggle("PulsarAnimeSkyOn", {
@@ -1117,11 +1179,10 @@ AnimeSkyGroup:AddToggle("PulsarAnimeSkyOn", {
     Default = false,
     Callback = function(on)
         if on then
-            local raw = ""
-            pcall(function() raw = tostring(Library.Options.PulsarAnimeSkyCustomId.Value or "") end)
-            local custom = tonumber((raw:match("%d+") or ""))
-            local list = custom and { custom } or AnimeSkyPresets[AnimeSkyCurrent]
-            if list then AnimeSkyApply(list) end
+            if #AnimeSkyState.Ids == 0 then
+                AnimeSkyLoadPreset(AnimeSkyCurrent)
+            end
+            AnimeSkyApply()
         else
             AnimeSkyRemove()
         end
