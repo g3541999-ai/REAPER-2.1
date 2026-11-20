@@ -687,10 +687,12 @@ local SoundService = game:GetService("SoundService")
 local PulsarSoundMuteOff
 local GfxUnload
 local PulsarMusicStop
+local PulsarAnimeSkyOff
 
 local function VisualsCleanup()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
+    if PulsarAnimeSkyOff then pcall(PulsarAnimeSkyOff) end
     if GfxUnload then pcall(GfxUnload) end
     if PulsarMusicStop then pcall(PulsarMusicStop) end
     Updaters = {}
@@ -992,6 +994,105 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
             ApplyShader(currentShader, currentLevel)
         else
             RemoveShader()
+        end
+    end,
+})
+
+-- =====================================================================
+-- АНИМЕ НЕБО (левая колонка, под Shaders) — пресеты + свой ID
+-- =====================================================================
+local AnimeSkyPresets = {
+    ["Аниме тян 1"] = 21076888,
+    ["Аниме тян 2"] = 21076945,
+    ["Аниме тян 3"] = 21077007,
+    ["Аниме тян 4"] = 21077125,
+}
+local AnimeSkyOrder = { "Аниме тян 1", "Аниме тян 2", "Аниме тян 3", "Аниме тян 4" }
+
+local AnimeSkyState = { Sky = nil, Backup = nil, BackupExisted = false }
+
+local function AnimeSkyApply(id)
+    local existing = Lighting:FindFirstChildOfClass("Sky")
+    if not AnimeSkyState.Sky then
+        AnimeSkyState.BackupExisted = existing ~= nil
+        if existing then
+            AnimeSkyState.Backup = {
+                SkyboxBk = existing.SkyboxBk, SkyboxDn = existing.SkyboxDn, SkyboxFt = existing.SkyboxFt,
+                SkyboxLf = existing.SkyboxLf, SkyboxRt = existing.SkyboxRt, SkyboxUp = existing.SkyboxUp,
+            }
+            AnimeSkyState.Sky = existing
+        else
+            local sky = Instance.new("Sky")
+            sky.Name = "PulsarAnimeSky"
+            sky.Parent = Lighting
+            AnimeSkyState.Sky = sky
+        end
+    end
+    local tex = "rbxassetid://" .. id
+    local s = AnimeSkyState.Sky
+    pcall(function()
+        s.SkyboxBk, s.SkyboxDn, s.SkyboxFt = tex, tex, tex
+        s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = tex, tex, tex
+        s.StarCount = 0
+        s.SunAngularSize = 0
+        s.MoonAngularSize = 0
+        s.CelestialBodiesShown = false
+    end)
+end
+
+local function AnimeSkyRemove()
+    local s = AnimeSkyState.Sky
+    if not s then return end
+    AnimeSkyState.Sky = nil
+    pcall(function()
+        if AnimeSkyState.BackupExisted and AnimeSkyState.Backup then
+            for k, v in pairs(AnimeSkyState.Backup) do s[k] = v end
+        else
+            s:Destroy()
+        end
+    end)
+    AnimeSkyState.Backup = nil
+    AnimeSkyState.BackupExisted = false
+end
+PulsarAnimeSkyOff = AnimeSkyRemove
+
+local AnimeSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
+
+local AnimeSkyCurrent = AnimeSkyOrder[1]
+
+AnimeSkyGroup:AddDropdown("PulsarAnimeSkyPreset", {
+    Values = AnimeSkyOrder,
+    Default = 1,
+    Multi = false,
+    Text = "Пресет",
+    Callback = function(v)
+        if AnimeSkyPresets[v] then
+            AnimeSkyCurrent = v
+            pcall(function()
+                if Library.Options.PulsarAnimeSkyOn.Value then
+                    AnimeSkyApply(AnimeSkyPresets[v])
+                end
+            end)
+        end
+    end,
+})
+
+AnimeSkyGroup:AddInput("PulsarAnimeSkyCustomId", {
+    Text = "Свой ID картинки",
+    Placeholder = "Вставь ID…",
+})
+
+AnimeSkyGroup:AddToggle("PulsarAnimeSkyOn", {
+    Text = "Включить аниме небо",
+    Default = false,
+    Callback = function(on)
+        if on then
+            local raw = ""
+            pcall(function() raw = tostring(Library.Options.PulsarAnimeSkyCustomId.Value or "") end)
+            local id = tonumber((raw:match("%d+") or "")) or AnimeSkyPresets[AnimeSkyCurrent]
+            if id then AnimeSkyApply(id) end
+        else
+            AnimeSkyRemove()
         end
     end,
 })
