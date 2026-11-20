@@ -111,7 +111,8 @@ LoadingGui.IgnoreGuiInset = true
 LoadingGui.Enabled = false
 
 local LoadingCard = Instance.new("Frame")
-LoadingCard.Position = UDim2.new(0.5, -110, 0, 56)
+LoadingCard.AnchorPoint = Vector2.new(1, 0)
+LoadingCard.Position = UDim2.new(1, 270, 0, 10)
 LoadingCard.Size = UDim2.fromOffset(220, 30)
 LoadingCard.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 LoadingCard.BorderSizePixel = 0
@@ -138,7 +139,14 @@ LoadingLabel.Parent = LoadingCard
 local function HideLoadingCard()
     pcall(function()
         LoadingLabel.Text = "PULSAR 2.3 запущен ✓"
-        task.delay(1.5, function() pcall(function() LoadingGui:Destroy() end) end)
+        task.delay(1.5, function()
+            pcall(function()
+                TweenService:Create(LoadingCard, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Position = UDim2.new(1, 270, 0, 10),
+                }):Play()
+            end)
+            task.delay(0.35, function() pcall(function() LoadingGui:Destroy() end) end)
+        end)
     end)
 end
 
@@ -146,6 +154,11 @@ if not pcall(function() LoadingGui.Parent = (gethui and gethui()) or game:GetSer
     LoadingGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 end
 pcall(function() LoadingGui.Enabled = true end)
+pcall(function()
+    TweenService:Create(LoadingCard, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -20, 0, 10),
+    }):Play()
+end)
 
 local okLib, Library = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
