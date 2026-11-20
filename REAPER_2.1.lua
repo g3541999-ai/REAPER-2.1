@@ -1017,94 +1017,99 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 })
 
 -- =====================================================================
--- АНИМЕ НЕБО (левая колонка, под Shaders) — 6 панельное, пресеты + своя панель
+-- АНИМЕ НЕБО (левая колонка, под Shaders) — пресеты + свой ID
 -- =====================================================================
 local AnimeSkyPresets = {
-    ["Аниме набор 1"] = { 21076888, 21076945, 21077007, 21077125, 77142077267813, 119917938436254 },
-    ["Аниме набор 2"] = { 120668168370087, 105189455817751, 21077007, 21076945, 21077125, 21076888 },
+    ["Аниме набор 1"] = { 5923420036, 7292914706, 1716022707, 7279024127, 8092141567, 5255880057 },
+    ["Аниме набор 2"] = { 6257816578, 6086174804, 6949248983, 8361424316, 1716022707, 5923420036 },
 }
 local AnimeSkyOrder = { "Аниме набор 1", "Аниме набор 2" }
 
-local AnimeSkyPanelCount = 6
-local AnimeSkyRadius = 2500
-local AnimeSkyWidth = 1500
-local AnimeSkyHeight = 2048
+local AnimeSkyFaces = { "Сзади", "Впереди", "Слева", "Справа", "Верх", "Низ" }
+local AnimeSkyFaceProps = {
+    ["Сзади"] = "SkyboxBk", ["Впереди"] = "SkyboxFt",
+    ["Слева"] = "SkyboxLf", ["Справа"] = "SkyboxRt",
+    ["Верх"] = "SkyboxUp", ["Низ"] = "SkyboxDn",
+}
+local AnimeSkyProps = { "SkyboxBk", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp", "SkyboxDn" }
 
-local AnimeSkyState = { Parts = nil, Conn = nil, Ids = {} }
+local AnimeSkyImageCache = {}
+local AnimeSkyState = { Sky = nil, Backup = nil, Ids = {} }
+
+local function AnimeSkyToImageId(id)
+    id = tonumber(id) or id
+    if AnimeSkyImageCache[id] then return AnimeSkyImageCache[id] end
+    local result = id
+    pcall(function()
+        local txt = game:HttpGet("https://assetdelivery.roblox.com/v1/asset/?id=" .. id)
+        local img = tostring(txt):match("rbxassetid://(%d+)")
+        if img then result = tonumber(img) end
+    end)
+    AnimeSkyImageCache[id] = result
+    return result
+end
 
 local function AnimeSkyRemove()
-    if AnimeSkyState.Conn then
-        pcall(function() AnimeSkyState.Conn:Disconnect() end)
-        AnimeSkyState.Conn = nil
-    end
-    if AnimeSkyState.Parts then
-        for _, p in ipairs(AnimeSkyState.Parts) do
-            pcall(function() p:Destroy() end)
-        end
-        AnimeSkyState.Parts = nil
+    local sky = AnimeSkyState.Sky
+    if not sky then return end
+    AnimeSkyState.Sky = nil
+    if AnimeSkyState.Backup then
+        pcall(function()
+            for k, v in pairs(AnimeSkyState.Backup) do sky[k] = v end
+        end)
+        AnimeSkyState.Backup = nil
+    else
+        pcall(function() sky:Destroy() end)
     end
 end
 
 local function AnimeSkyApply()
     AnimeSkyRemove()
-    local camera = workspace.CurrentCamera
-    if not (camera and #AnimeSkyState.Ids > 0) then return end
-    local base = camera.CFrame.Position
-    local n = AnimeSkyPanelCount
-    local parts = {}
-    for i = 1, n do
-        local angle = (i - 1) * (2 * math.pi / n)
-        local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
-        local p = Instance.new("Part")
-        p.Name = "PulsarAnimeSkyPanel"
-        p.Size = Vector3.new(AnimeSkyWidth, AnimeSkyHeight, 1)
-        p.Transparency = 1
-        p.Anchored = true
-        p.CanCollide = false
-        p.CanQuery = false
-        p.CanTouch = false
-        p.CastShadow = false
-        p.CFrame = CFrame.lookAt(base + dir * AnimeSkyRadius, base)
-        local id = AnimeSkyState.Ids[((i - 1) % #AnimeSkyState.Ids) + 1]
-        if id then
-            local decal = Instance.new("Decal")
-            decal.Face = Enum.NormalId.Front
-            decal.Texture = "rbxassetid://" .. id
-            decal.Parent = p
+    local ids = AnimeSkyState.Ids
+    if #ids == 0 then return end
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if sky then
+        local backup = {}
+        for _, prop in ipairs(AnimeSkyProps) do
+            backup[prop] = sky[prop]
         end
-        p.Parent = workspace
-        parts[i] = p
+        pcall(function() backup.StarCount = sky.StarCount end)
+        pcall(function() backup.SunAngularSize = sky.SunAngularSize end)
+        pcall(function() backup.MoonAngularSize = sky.MoonAngularSize end)
+        AnimeSkyState.Backup = backup
+    else
+        sky = Instance.new("Sky")
+        sky.Name = "PulsarAnimeSky"
+        sky.Parent = Lighting
+        AnimeSkyState.Backup = nil
     end
-    AnimeSkyState.Parts = parts
-    AnimeSkyState.Conn = RunService.RenderStepped:Connect(function()
-        local cam = workspace.CurrentCamera
-        if not (cam and AnimeSkyState.Parts) then return end
-        local pos = cam.CFrame.Position
-        for i, p in ipairs(AnimeSkyState.Parts) do
-            local angle = (i - 1) * (2 * math.pi / n)
-            local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
-            p.CFrame = CFrame.lookAt(pos + dir * AnimeSkyRadius, pos)
+    for i = 1, 6 do
+        local id = ids[i]
+        if id then
+            sky[AnimeSkyProps[i]] = "rbxassetid://" .. AnimeSkyToImageId(id)
         end
-    end)
+    end
+    pcall(function() sky.StarCount = 0 end)
+    pcall(function() sky.SunAngularSize = 0 end)
+    pcall(function() sky.MoonAngularSize = 0 end)
+    AnimeSkyState.Sky = sky
 end
-
 local function AnimeSkyLoadPreset(name)
     local list = AnimeSkyPresets[name]
     if not list then return end
     AnimeSkyState.Ids = {}
-    for i = 1, AnimeSkyPanelCount do
+    for i = 1, 6 do
         AnimeSkyState.Ids[i] = list[((i - 1) % #list) + 1]
     end
 end
 
-local function AnimeSkySetPanel(index, id)
-    if type(index) ~= "number" or index < 1 or index > AnimeSkyPanelCount then return end
-    AnimeSkyState.Ids[index] = id
-    pcall(function()
-        if Library.Options.PulsarAnimeSkyOn.Value then
-            AnimeSkyApply()
-        end
-    end)
+local function AnimeSkySetFace(faceName, id)
+    local idx = table.find(AnimeSkyFaces, faceName)
+    if not idx then return end
+    AnimeSkyState.Ids[idx] = id
+    if AnimeSkyState.Sky then
+        AnimeSkyApply()
+    end
 end
 PulsarAnimeSkyOff = AnimeSkyRemove
 
@@ -1131,8 +1136,8 @@ AnimeSkyGroup:AddDropdown("PulsarAnimeSkyPreset", {
     end,
 })
 
-AnimeSkyGroup:AddDropdown("PulsarAnimeSkyPanel", {
-    Values = { "Панель 1", "Панель 2", "Панель 3", "Панель 4", "Панель 5", "Панель 6" },
+AnimeSkyGroup:AddDropdown("PulsarAnimeSkyFace", {
+    Values = AnimeSkyFaces,
     Default = 1,
     Multi = false,
     Text = "Куда поставить",
@@ -1145,19 +1150,18 @@ AnimeSkyGroup:AddInput("PulsarAnimeSkyPanelId", {
 })
 
 AnimeSkyGroup:AddButton({
-    Text = "🖼 Поставить на панель",
+    Text = "🖼 Поставить на сторону",
     Func = function()
-        local raw, panel = "", nil
+        local raw, face = "", nil
         pcall(function() raw = tostring(Library.Options.PulsarAnimeSkyPanelId.Value or "") end)
-        pcall(function() panel = Library.Options.PulsarAnimeSkyPanel.Value end)
+        pcall(function() face = Library.Options.PulsarAnimeSkyFace.Value end)
         local id = tonumber((raw:match("%d+") or ""))
-        local idx = tonumber((tostring(panel or ""):match("%d+") or ""))
         if not id then
             Library:Notify("Вставь ID картинки выше")
             return
         end
-        AnimeSkySetPanel(idx or 1, id)
-        Library:Notify("Панель " .. (idx or 1) .. ": картинка поставлена")
+        AnimeSkySetFace(face or AnimeSkyFaces[1], id)
+        Library:Notify((face or AnimeSkyFaces[1]) .. ": картинка поставлена")
     end,
 })
 
