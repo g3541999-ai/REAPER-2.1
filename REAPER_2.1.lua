@@ -1017,7 +1017,7 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 })
 
 -- =====================================================================
--- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — 4 стены + потолок
+-- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — куб размером с карту
 -- =====================================================================
 local CustomSkyQuick = {
     ["🐱 Аниме кошкодевочка"] = 1051301909,
@@ -1029,8 +1029,8 @@ local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 
 
 local CustomSkyState = { Model = nil, Conn = nil }
 
--- Куб 500x500x500 следует ЗА ИГРОКОМ (только позиция, без вращений камеры): 4 стены + потолок, пола нет.
--- Off = сдвиг части относительно игрока, Face = сторона декали (лицом внутрь).
+-- Куб следует ЗА ИГРОКОМ (только позиция, без вращений камеры): 4 стены + потолок, пола нет.
+-- Off = сдвиг относительно игрока в базовом размере (полкуба 250), растягивается по размеру карты.
 local CustomSkyWalls = {
     { Name = "FrontWall", Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, -250), Face = Enum.NormalId.Back },
     { Name = "BackWall",  Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, 250),  Face = Enum.NormalId.Front },
@@ -1057,6 +1057,23 @@ local function CustomSkyBuild(id)
     if not cam then return end
     local model = Instance.new("Model")
     model.Name = "PulsarSkyCube"
+    local half = 250
+    pcall(function()
+        local maxDist = 0
+        local t0 = os.clock()
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and not obj:IsA("Terrain") then
+                local d = obj.Position.Magnitude + obj.Size.Magnitude * 0.5
+                if d > maxDist then maxDist = d end
+            end
+            if os.clock() - t0 > 0.1 then
+                task.wait()
+                t0 = os.clock()
+            end
+        end
+        if maxDist > 250 then half = math.min(math.ceil(maxDist + 500), 30000) end
+    end)
+    local k = half / 250
     for _, w in ipairs(CustomSkyWalls) do
         local p = Instance.new("Part")
         p.Name = w.Name
@@ -1066,7 +1083,7 @@ local function CustomSkyBuild(id)
         p.CanTouch = false
         p.CastShadow = false
         p.Transparency = 1
-        p.Size = w.Size
+        p.Size = w.Size * k
         local sg = Instance.new("SurfaceGui")
         sg.Name = "SkyImage"
         sg.Face = w.Face
@@ -1089,7 +1106,7 @@ local function CustomSkyBuild(id)
         if not pos then return end
         for _, w in ipairs(CustomSkyWalls) do
             if w.Part and w.Part.Parent then
-                w.Part.CFrame = CFrame.new(pos) * CFrame.new(w.Off)
+                w.Part.CFrame = CFrame.new(pos) * CFrame.new(w.Off * k)
             end
         end
     end
