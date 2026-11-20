@@ -1019,22 +1019,16 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 -- =====================================================================
 -- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — 4 стены + потолок
 -- =====================================================================
-local CustomSkyFaces = { "Зад", "Перед", "Лево", "Право", "Потолок" }
-local CustomSkyFaceProps = {
-    ["Зад"] = "SkyboxBk", ["Перед"] = "SkyboxFt",
-    ["Лево"] = "SkyboxLf", ["Право"] = "SkyboxRt",
-    ["Потолок"] = "SkyboxUp",
-}
 local CustomSkyProps = { "SkyboxBk", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp" }
 
 local CustomSkyQuick = {
     ["🐱 Аниме кошкодевочка"] = 1051301909,
+    ["🌸 Кавай с цветами"] = 5923420036,
     ["🖤 Чёрно-белое аниме"] = 6357863121,
     ["🤖 Кибер-киса"] = 14433437105,
 }
-local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🖤 Чёрно-белое аниме", "🤖 Кибер-киса" }
+local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 Кавай с цветами", "🖤 Чёрно-белое аниме", "🤖 Кибер-киса" }
 
-local CustomSkyImageCache = {}
 local CustomSkyState = { Sky = nil, Backup = nil }
 
 local function CustomSkyRemove()
@@ -1051,19 +1045,6 @@ local function CustomSkyRemove()
     end
 end
 PulsarCustomSkyOff = CustomSkyRemove
-
-local function CustomSkyToImageId(id)
-    id = tonumber(id) or id
-    if CustomSkyImageCache[id] then return CustomSkyImageCache[id] end
-    local result = id
-    pcall(function()
-        local txt = game:HttpGet("https://assetdelivery.roblox.com/v1/asset/?id=" .. id)
-        local img = tostring(txt):match("rbxassetid://(%d+)")
-        if img then result = tonumber(img) end
-    end)
-    CustomSkyImageCache[id] = result
-    return result
-end
 
 local function CustomSkyPatch(patch)
     if not next(patch) then return end
@@ -1083,20 +1064,28 @@ local function CustomSkyPatch(patch)
         CustomSkyState.Backup = nil
     end
     for prop, id in pairs(patch) do
-        sky[prop] = "rbxassetid://" .. CustomSkyToImageId(id)
+        sky[prop] = "rbxassetid://" .. id
     end
     CustomSkyState.Sky = sky
 end
 
-local CustomSkyGroup = VisualTab:AddLeftGroupbox("Кастомное небо")
+local CustomSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
+
+CustomSkyGroup:AddDropdown("PulsarCustomSkyQuick", {
+    Values = CustomSkyQuickOrder,
+    Default = 1,
+    Multi = false,
+    Text = "Картинка",
+    Callback = function() end,
+})
 
 CustomSkyGroup:AddInput("PulsarCustomSkyId", {
-    Text = "ID картинки",
+    Text = "Свой ID (по желанию)",
     Placeholder = "Вставь ID…",
 })
 
 CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
-    Text = "Включить кастомное небо",
+    Text = "Включить аниме небо",
     Default = false,
     Callback = function(on)
         if on then
@@ -1109,7 +1098,7 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
                 id = CustomSkyQuick[quickName or ""]
             end
             if not id then
-                Library:Notify("Вставь ID или выбери сверху в Быстром выборе")
+                Library:Notify("Выбери Картинку сверху или вставь Свой ID")
                 pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
                 return
             end
@@ -1119,76 +1108,6 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
             CustomSkyRemove()
             Library:Notify("Небо возвращено как было")
         end
-    end,
-})
-
-CustomSkyGroup:AddButton({
-    Text = "🖼 На всё небо",
-    Func = function()
-        local raw = ""
-        pcall(function() raw = tostring(Library.Options.PulsarCustomSkyId.Value or "") end)
-        local id = tonumber((raw:match("%d+") or ""))
-        if not id then
-            Library:Notify("Вставь ID картинки выше")
-            return
-        end
-        CustomSkyPatch({
-            SkyboxBk = id, SkyboxFt = id, SkyboxLf = id,
-            SkyboxRt = id, SkyboxUp = id,
-        })
-        Library:Notify("Небо поставлено (ID: " .. id .. ")")
-    end,
-})
-
-CustomSkyGroup:AddDropdown("PulsarCustomSkyFace", {
-    Values = CustomSkyFaces,
-    Default = 1,
-    Multi = false,
-    Text = "Сторона",
-    Callback = function() end,
-})
-
-CustomSkyGroup:AddButton({
-    Text = "🖼 Поставить на сторону",
-    Func = function()
-        local raw, face = "", nil
-        pcall(function() raw = tostring(Library.Options.PulsarCustomSkyId.Value or "") end)
-        pcall(function() face = Library.Options.PulsarCustomSkyFace.Value end)
-        local id = tonumber((raw:match("%d+") or ""))
-        if not id then
-            Library:Notify("Вставь ID картинки выше")
-            return
-        end
-        local prop = CustomSkyFaceProps[face or CustomSkyFaces[1]]
-        if not prop then return end
-        CustomSkyPatch({ [prop] = id })
-        Library:Notify((face or CustomSkyFaces[1]) .. ": картинка поставлена")
-    end,
-})
-
-CustomSkyGroup:AddDropdown("PulsarCustomSkyQuick", {
-    Values = CustomSkyQuickOrder,
-    Default = 1,
-    Multi = false,
-    Text = "Быстрый выбор",
-    Callback = function() end,
-})
-
-CustomSkyGroup:AddButton({
-    Text = "⚡ Поставить на всё небо",
-    Func = function()
-        local name = nil
-        pcall(function() name = Library.Options.PulsarCustomSkyQuick.Value end)
-        local id = CustomSkyQuick[name or ""]
-        if not id then
-            Library:Notify("Выбери картинку в Быстром выборе")
-            return
-        end
-        CustomSkyPatch({
-            SkyboxBk = id, SkyboxFt = id, SkyboxLf = id,
-            SkyboxRt = id, SkyboxUp = id,
-        })
-        Library:Notify("Небо поставлено: " .. (name or ""))
     end,
 })
 
