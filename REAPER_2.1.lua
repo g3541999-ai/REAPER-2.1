@@ -705,12 +705,12 @@ local SoundService = game:GetService("SoundService")
 local PulsarSoundMuteOff
 local GfxUnload
 local PulsarMusicStop
-local PulsarAnimeSkyOff
+local PulsarCustomSkyOff
 
 local function VisualsCleanup()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
     RemoveShader()
-    if PulsarAnimeSkyOff then pcall(PulsarAnimeSkyOff) end
+    if PulsarCustomSkyOff then pcall(PulsarCustomSkyOff) end
     if GfxUnload then pcall(GfxUnload) end
     if PulsarMusicStop then pcall(PulsarMusicStop) end
     Updaters = {}
@@ -1017,179 +1017,159 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 })
 
 -- =====================================================================
--- АНИМЕ НЕБО (левая колонка, под Shaders) — пресеты + свой ID
+-- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — 4 стены + потолок
 -- =====================================================================
-local AnimeSkyPresets = {
-    ["Аниме набор 1"] = { 5923420036, 7292914706, 1716022707, 7279024127, 8092141567, 5255880057 },
-    ["Аниме набор 2"] = { 6257816578, 6086174804, 6949248983, 8361424316, 1716022707, 5923420036 },
+local CustomSkyFaces = { "Зад", "Перед", "Лево", "Право", "Потолок" }
+local CustomSkyFaceProps = {
+    ["Зад"] = "SkyboxBk", ["Перед"] = "SkyboxFt",
+    ["Лево"] = "SkyboxLf", ["Право"] = "SkyboxRt",
+    ["Потолок"] = "SkyboxUp",
 }
-local AnimeSkyOrder = { "Аниме набор 1", "Аниме набор 2" }
+local CustomSkyProps = { "SkyboxBk", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp" }
 
-local AnimeSkyFaces = { "Сзади", "Впереди", "Слева", "Справа", "Верх", "Низ" }
-local AnimeSkyFaceProps = {
-    ["Сзади"] = "SkyboxBk", ["Впереди"] = "SkyboxFt",
-    ["Слева"] = "SkyboxLf", ["Справа"] = "SkyboxRt",
-    ["Верх"] = "SkyboxUp", ["Низ"] = "SkyboxDn",
+local CustomSkyQuick = {
+    ["🐱 Аниме кошкодевочка"] = 1051301909,
+    ["🖤 Чёрно-белое аниме"] = 6357863121,
+    ["🤖 Кибер-киса"] = 14433437105,
 }
-local AnimeSkyProps = { "SkyboxBk", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp", "SkyboxDn" }
+local CustomSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🖤 Чёрно-белое аниме", "🤖 Кибер-киса" }
 
-local AnimeSkyImageCache = {}
-local AnimeSkyState = { Sky = nil, Backup = nil, Ids = {} }
+local CustomSkyImageCache = {}
+local CustomSkyState = { Sky = nil, Backup = nil }
 
-local function AnimeSkyToImageId(id)
+local function CustomSkyRemove()
+    local sky = CustomSkyState.Sky
+    if not sky then return end
+    CustomSkyState.Sky = nil
+    if CustomSkyState.Backup then
+        pcall(function()
+            for k, v in pairs(CustomSkyState.Backup) do sky[k] = v end
+        end)
+        CustomSkyState.Backup = nil
+    else
+        pcall(function() sky:Destroy() end)
+    end
+end
+PulsarCustomSkyOff = CustomSkyRemove
+
+local function CustomSkyPatch(patch)
+    if not next(patch) then return end
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if sky then
+        if not CustomSkyState.Sky then
+            local backup = {}
+            for _, prop in ipairs(CustomSkyProps) do
+                backup[prop] = sky[prop]
+            end
+            CustomSkyState.Backup = backup
+        end
+    else
+        sky = Instance.new("Sky")
+        sky.Name = "PulsarCustomSky"
+        sky.Parent = Lighting
+        CustomSkyState.Backup = nil
+    end
+    for prop, id in pairs(patch) do
+        sky[prop] = "rbxassetid://" .. CustomSkyToImageId(id)
+    end
+    CustomSkyState.Sky = sky
+end
+
+local function CustomSkyToImageId(id)
     id = tonumber(id) or id
-    if AnimeSkyImageCache[id] then return AnimeSkyImageCache[id] end
+    if CustomSkyImageCache[id] then return CustomSkyImageCache[id] end
     local result = id
     pcall(function()
         local txt = game:HttpGet("https://assetdelivery.roblox.com/v1/asset/?id=" .. id)
         local img = tostring(txt):match("rbxassetid://(%d+)")
         if img then result = tonumber(img) end
     end)
-    AnimeSkyImageCache[id] = result
+    CustomSkyImageCache[id] = result
     return result
 end
 
-local function AnimeSkyRemove()
-    local sky = AnimeSkyState.Sky
-    if not sky then return end
-    AnimeSkyState.Sky = nil
-    if AnimeSkyState.Backup then
-        pcall(function()
-            for k, v in pairs(AnimeSkyState.Backup) do sky[k] = v end
-        end)
-        AnimeSkyState.Backup = nil
-    else
-        pcall(function() sky:Destroy() end)
-    end
-end
+local CustomSkyGroup = VisualTab:AddLeftGroupbox("Кастомное небо")
 
-local function AnimeSkyApply()
-    AnimeSkyRemove()
-    local ids = AnimeSkyState.Ids
-    if #ids == 0 then return end
-    local sky = Lighting:FindFirstChildOfClass("Sky")
-    if sky then
-        local backup = {}
-        for _, prop in ipairs(AnimeSkyProps) do
-            backup[prop] = sky[prop]
-        end
-        pcall(function() backup.StarCount = sky.StarCount end)
-        pcall(function() backup.SunAngularSize = sky.SunAngularSize end)
-        pcall(function() backup.MoonAngularSize = sky.MoonAngularSize end)
-        AnimeSkyState.Backup = backup
-    else
-        sky = Instance.new("Sky")
-        sky.Name = "PulsarAnimeSky"
-        sky.Parent = Lighting
-        AnimeSkyState.Backup = nil
-    end
-    for i = 1, 6 do
-        local id = ids[i]
-        if id then
-            sky[AnimeSkyProps[i]] = "rbxassetid://" .. AnimeSkyToImageId(id)
-        end
-    end
-    pcall(function() sky.StarCount = 0 end)
-    pcall(function() sky.SunAngularSize = 0 end)
-    pcall(function() sky.MoonAngularSize = 0 end)
-    AnimeSkyState.Sky = sky
-end
-local function AnimeSkyLoadPreset(name)
-    local list = AnimeSkyPresets[name]
-    if not list then return end
-    AnimeSkyState.Ids = {}
-    for i = 1, 6 do
-        AnimeSkyState.Ids[i] = list[((i - 1) % #list) + 1]
-    end
-end
-
-local function AnimeSkySetFace(faceName, id)
-    local idx = table.find(AnimeSkyFaces, faceName)
-    if not idx then return end
-    AnimeSkyState.Ids[idx] = id
-    if AnimeSkyState.Sky then
-        AnimeSkyApply()
-    end
-end
-PulsarAnimeSkyOff = AnimeSkyRemove
-
-local AnimeSkyGroup = VisualTab:AddLeftGroupbox("Аниме небо")
-
-local AnimeSkyCurrent = AnimeSkyOrder[1]
-AnimeSkyLoadPreset(AnimeSkyCurrent)
-
-AnimeSkyGroup:AddDropdown("PulsarAnimeSkyPreset", {
-    Values = AnimeSkyOrder,
-    Default = 1,
-    Multi = false,
-    Text = "Пресет (набор тян)",
-    Callback = function(v)
-        if AnimeSkyPresets[v] then
-            AnimeSkyCurrent = v
-            AnimeSkyLoadPreset(v)
-            pcall(function()
-                if Library.Options.PulsarAnimeSkyOn.Value then
-                    AnimeSkyApply()
-                end
-            end)
-        end
-    end,
-})
-
-AnimeSkyGroup:AddDropdown("PulsarAnimeSkyFace", {
-    Values = AnimeSkyFaces,
-    Default = 1,
-    Multi = false,
-    Text = "Куда поставить",
-    Callback = function() end,
-})
-
-AnimeSkyGroup:AddInput("PulsarAnimeSkyPanelId", {
-    Text = "ID для панели",
+CustomSkyGroup:AddInput("PulsarCustomSkyId", {
+    Text = "ID картинки",
     Placeholder = "Вставь ID…",
 })
 
-AnimeSkyGroup:AddButton({
-    Text = "🖼 Поставить на сторону",
+CustomSkyGroup:AddButton({
+    Text = "🖼 На всё небо",
     Func = function()
-        local raw, face = "", nil
-        pcall(function() raw = tostring(Library.Options.PulsarAnimeSkyPanelId.Value or "") end)
-        pcall(function() face = Library.Options.PulsarAnimeSkyFace.Value end)
+        local raw = ""
+        pcall(function() raw = tostring(Library.Options.PulsarCustomSkyId.Value or "") end)
         local id = tonumber((raw:match("%d+") or ""))
         if not id then
             Library:Notify("Вставь ID картинки выше")
             return
         end
-        AnimeSkySetFace(face or AnimeSkyFaces[1], id)
-        Library:Notify((face or AnimeSkyFaces[1]) .. ": картинка поставлена")
+        CustomSkyPatch({
+            SkyboxBk = id, SkyboxFt = id, SkyboxLf = id,
+            SkyboxRt = id, SkyboxUp = id,
+        })
+        Library:Notify("Небо поставлено (ID: " .. id .. ")")
     end,
 })
 
-AnimeSkyGroup:AddButton({
-    Text = "🧹 Вернуть пресет",
+CustomSkyGroup:AddDropdown("PulsarCustomSkyFace", {
+    Values = CustomSkyFaces,
+    Default = 1,
+    Multi = false,
+    Text = "Сторона",
+    Callback = function() end,
+})
+
+CustomSkyGroup:AddButton({
+    Text = "🖼 Поставить на сторону",
     Func = function()
-        AnimeSkyLoadPreset(AnimeSkyCurrent)
-        pcall(function()
-            if Library.Options.PulsarAnimeSkyOn.Value then
-                AnimeSkyApply()
-            end
-        end)
-        Library:Notify("Панели сброшены на пресет")
+        local raw, face = "", nil
+        pcall(function() raw = tostring(Library.Options.PulsarCustomSkyId.Value or "") end)
+        pcall(function() face = Library.Options.PulsarCustomSkyFace.Value end)
+        local id = tonumber((raw:match("%d+") or ""))
+        if not id then
+            Library:Notify("Вставь ID картинки выше")
+            return
+        end
+        local prop = CustomSkyFaceProps[face or CustomSkyFaces[1]]
+        if not prop then return end
+        CustomSkyPatch({ [prop] = id })
+        Library:Notify((face or CustomSkyFaces[1]) .. ": картинка поставлена")
     end,
 })
 
-AnimeSkyGroup:AddToggle("PulsarAnimeSkyOn", {
-    Text = "Включить аниме небо",
-    Default = false,
-    Callback = function(on)
-        if on then
-            if #AnimeSkyState.Ids == 0 then
-                AnimeSkyLoadPreset(AnimeSkyCurrent)
-            end
-            AnimeSkyApply()
-        else
-            AnimeSkyRemove()
+CustomSkyGroup:AddDropdown("PulsarCustomSkyQuick", {
+    Values = CustomSkyQuickOrder,
+    Default = 1,
+    Multi = false,
+    Text = "Быстрый выбор",
+    Callback = function() end,
+})
+
+CustomSkyGroup:AddButton({
+    Text = "⚡ Поставить на всё небо",
+    Func = function()
+        local name = nil
+        pcall(function() name = Library.Options.PulsarCustomSkyQuick.Value end)
+        local id = CustomSkyQuick[name or ""]
+        if not id then
+            Library:Notify("Выбери картинку в Быстром выборе")
+            return
         end
+        CustomSkyPatch({
+            SkyboxBk = id, SkyboxFt = id, SkyboxLf = id,
+            SkyboxRt = id, SkyboxUp = id,
+        })
+        Library:Notify("Небо поставлено: " .. (name or ""))
+    end,
+})
+
+CustomSkyGroup:AddButton({
+    Text = "🔄 Вернуть своё небо",
+    Func = function()
+        CustomSkyRemove()
+        Library:Notify("Небо возвращено как было")
     end,
 })
 
