@@ -267,6 +267,24 @@ StatsGroup:AddLabel("Вкладок: 13")
 StatsGroup:AddLabel("Шейдеров: 6")
 local PlayersLabel = StatsGroup:AddLabel("Игроков в сервере: " .. #Players:GetPlayers())
 
+local CreatorGroup = TabObjects["Home"]:AddRightGroupbox("Создатели")
+CreatorGroup:AddLabel("Создатели: PULSAR (FTAP)")
+CreatorGroup:AddLabel("Telegram: @FTAP_777")
+CreatorGroup:AddButton({
+    Text = "📢 Наш Telegram",
+    Func = function()
+        local ok = pcall(function() setclipboard("https://t.me/FTAP_777") end)
+        if not ok then
+            ok = pcall(function() toclipboard("https://t.me/FTAP_777") end)
+        end
+        if ok then
+            Library:Notify("Ссылка на наш Telegram скопирована!")
+        else
+            Library:Notify("Копирование не поддерживается инжектором")
+        end
+    end,
+})
+
 pcall(function()
     HomeGroup:AddImage("LocalAvatar", {
         Image = "rbxthumb://type=Avatar&w=420&h=420&id=" .. LocalPlayer.UserId,
@@ -1002,57 +1020,69 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 -- АНИМЕ НЕБО (левая колонка, под Shaders) — пресеты + свой ID
 -- =====================================================================
 local AnimeSkyPresets = {
-    ["Аниме тян 1"] = 21076888,
-    ["Аниме тян 2"] = 21076945,
-    ["Аниме тян 3"] = 21077007,
-    ["Аниме тян 4"] = 21077125,
+    ["Аниме классика"] = { 21076888, 21076945, 21077007, 21077125 },
+    ["Аниме микс (8 тян)"] = { 21076888, 21076945, 21077007, 21077125, 77142077267813, 119917938436254, 120668168370087, 105189455817751 },
 }
-local AnimeSkyOrder = { "Аниме тян 1", "Аниме тян 2", "Аниме тян 3", "Аниме тян 4" }
+local AnimeSkyOrder = { "Аниме классика", "Аниме микс (8 тян)" }
 
-local AnimeSkyState = { Sky = nil, Backup = nil, BackupExisted = false }
+local AnimeSkyPanelCount = 8
+local AnimeSkyRadius = 2500
+local AnimeSkyWidth = 1963
+local AnimeSkyHeight = 2048
 
-local function AnimeSkyApply(id)
-    local existing = Lighting:FindFirstChildOfClass("Sky")
-    if not AnimeSkyState.Sky then
-        AnimeSkyState.BackupExisted = existing ~= nil
-        if existing then
-            AnimeSkyState.Backup = {
-                SkyboxBk = existing.SkyboxBk, SkyboxDn = existing.SkyboxDn, SkyboxFt = existing.SkyboxFt,
-                SkyboxLf = existing.SkyboxLf, SkyboxRt = existing.SkyboxRt, SkyboxUp = existing.SkyboxUp,
-            }
-            AnimeSkyState.Sky = existing
-        else
-            local sky = Instance.new("Sky")
-            sky.Name = "PulsarAnimeSky"
-            sky.Parent = Lighting
-            AnimeSkyState.Sky = sky
-        end
-    end
-    local tex = "rbxassetid://" .. id
-    local s = AnimeSkyState.Sky
-    pcall(function()
-        s.SkyboxBk, s.SkyboxDn, s.SkyboxFt = tex, tex, tex
-        s.SkyboxLf, s.SkyboxRt, s.SkyboxUp = tex, tex, tex
-        s.StarCount = 0
-        s.SunAngularSize = 0
-        s.MoonAngularSize = 0
-        s.CelestialBodiesShown = false
-    end)
-end
+local AnimeSkyState = { Parts = nil, Conn = nil }
 
 local function AnimeSkyRemove()
-    local s = AnimeSkyState.Sky
-    if not s then return end
-    AnimeSkyState.Sky = nil
-    pcall(function()
-        if AnimeSkyState.BackupExisted and AnimeSkyState.Backup then
-            for k, v in pairs(AnimeSkyState.Backup) do s[k] = v end
-        else
-            s:Destroy()
+    if AnimeSkyState.Conn then
+        pcall(function() AnimeSkyState.Conn:Disconnect() end)
+        AnimeSkyState.Conn = nil
+    end
+    if AnimeSkyState.Parts then
+        for _, p in ipairs(AnimeSkyState.Parts) do
+            pcall(function() p:Destroy() end)
+        end
+        AnimeSkyState.Parts = nil
+    end
+end
+
+local function AnimeSkyApply(idList)
+    AnimeSkyRemove()
+    local camera = workspace.CurrentCamera
+    if not (camera and type(idList) == "table" and #idList > 0) then return end
+    local base = camera.CFrame.Position
+    local n = AnimeSkyPanelCount
+    local parts = {}
+    for i = 1, n do
+        local angle = (i - 1) * (2 * math.pi / n)
+        local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        local p = Instance.new("Part")
+        p.Name = "PulsarAnimeSkyPanel"
+        p.Size = Vector3.new(AnimeSkyWidth, AnimeSkyHeight, 1)
+        p.Transparency = 1
+        p.Anchored = true
+        p.CanCollide = false
+        p.CanQuery = false
+        p.CanTouch = false
+        p.CastShadow = false
+        p.CFrame = CFrame.lookAt(base + dir * AnimeSkyRadius, base)
+        local decal = Instance.new("Decal")
+        decal.Face = Enum.NormalId.Front
+        decal.Texture = "rbxassetid://" .. idList[((i - 1) % #idList) + 1]
+        decal.Parent = p
+        p.Parent = workspace
+        parts[i] = p
+    end
+    AnimeSkyState.Parts = parts
+    AnimeSkyState.Conn = RunService.RenderStepped:Connect(function()
+        local cam = workspace.CurrentCamera
+        if not (cam and AnimeSkyState.Parts) then return end
+        local pos = cam.CFrame.Position
+        for i, p in ipairs(AnimeSkyState.Parts) do
+            local angle = (i - 1) * (2 * math.pi / n)
+            local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+            p.CFrame = CFrame.lookAt(pos + dir * AnimeSkyRadius, pos)
         end
     end)
-    AnimeSkyState.Backup = nil
-    AnimeSkyState.BackupExisted = false
 end
 PulsarAnimeSkyOff = AnimeSkyRemove
 
@@ -1089,8 +1119,9 @@ AnimeSkyGroup:AddToggle("PulsarAnimeSkyOn", {
         if on then
             local raw = ""
             pcall(function() raw = tostring(Library.Options.PulsarAnimeSkyCustomId.Value or "") end)
-            local id = tonumber((raw:match("%d+") or "")) or AnimeSkyPresets[AnimeSkyCurrent]
-            if id then AnimeSkyApply(id) end
+            local custom = tonumber((raw:match("%d+") or ""))
+            local list = custom and { custom } or AnimeSkyPresets[AnimeSkyCurrent]
+            if list then AnimeSkyApply(list) end
         else
             AnimeSkyRemove()
         end
