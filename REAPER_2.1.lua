@@ -1119,7 +1119,7 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
     end,
 })
 
--- АНИМЕ НЕБО (КУБ): 4 стены + потолок 500x500x500, ставится ОДИН РАЗ при включении
+-- АНИМЕ НЕБО (КУБ): 4 стены + потолок 2000x2000x2000, ставится ОДИН РАЗ при включении
 -- на месте игрока и НЕ двигается. Работает и с ID-декалями (через SurfaceGui).
 local CubeSkyQuick = {
     ["🐱 Аниме кошкодевочка"] = 1051301909,
@@ -1132,11 +1132,11 @@ local CubeSkyQuickOrder = { "🐱 Аниме кошкодевочка", "🌸 К
 local CubeSkyState = { Model = nil }
 
 local CubeSkyWalls = {
-    { Name = "FrontWall", Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, -250), Face = Enum.NormalId.Back },
-    { Name = "BackWall",  Size = Vector3.new(500, 500, 2), Off = Vector3.new(0, 0, 250),  Face = Enum.NormalId.Front },
-    { Name = "LeftWall",  Size = Vector3.new(2, 500, 500), Off = Vector3.new(-250, 0, 0), Face = Enum.NormalId.Right },
-    { Name = "RightWall", Size = Vector3.new(2, 500, 500), Off = Vector3.new(250, 0, 0),  Face = Enum.NormalId.Left },
-    { Name = "Ceiling",   Size = Vector3.new(500, 2, 500), Off = Vector3.new(0, 250, 0),  Face = Enum.NormalId.Bottom },
+    { Name = "FrontWall", Size = Vector3.new(2000, 2000, 2), Off = Vector3.new(0, 0, -1000), Face = Enum.NormalId.Back },
+    { Name = "BackWall",  Size = Vector3.new(2000, 2000, 2), Off = Vector3.new(0, 0, 1000),  Face = Enum.NormalId.Front },
+    { Name = "LeftWall",  Size = Vector3.new(2, 2000, 2000), Off = Vector3.new(-1000, 0, 0), Face = Enum.NormalId.Right },
+    { Name = "RightWall", Size = Vector3.new(2, 2000, 2000), Off = Vector3.new(1000, 0, 0),  Face = Enum.NormalId.Left },
+    { Name = "Ceiling",   Size = Vector3.new(2000, 2, 2000), Off = Vector3.new(0, 1000, 0),  Face = Enum.NormalId.Bottom },
 }
 
 local function CubeSkyRemove()
