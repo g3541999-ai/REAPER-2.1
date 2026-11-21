@@ -2184,5 +2184,92 @@ do
 end
 
 -- =====================================================================
--- ВКЛАДКА PLAYER — пустая (все функции удалены)
+-- ВКЛАДКА PLAYER
 -- =====================================================================
+do
+    local UIS = game:GetService("UserInputService")
+    local MoveGroup = TabObjects["Player"]:AddLeftGroupbox("Движение")
+
+    local WalkSpeed, JumpPower, FlySpeed = 16, 50, 50
+    local FlyOn, FlyConn = false, nil
+    local FlyBtn
+
+    local function GetHumanoid()
+        local char = LocalPlayer.Character
+        return char and char:FindFirstChildOfClass("Humanoid")
+    end
+
+    local function FlySet(on)
+        FlyOn = on
+        if FlyConn then pcall(function() FlyConn:Disconnect() end) FlyConn = nil end
+        pcall(function()
+            local hum = GetHumanoid()
+            if hum then hum.PlatformStand = false end
+        end)
+        if on then
+            FlyConn = RunService.Heartbeat:Connect(function()
+                pcall(function()
+                    local char = LocalPlayer.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
+                    if not (root and hum) then return end
+                    hum.PlatformStand = true
+                    local v = hum.MoveDirection * FlySpeed
+                    if UIS:IsKeyDown(Enum.KeyCode.Space) then v += Vector3.new(0, FlySpeed, 0) end
+                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then v -= Vector3.new(0, FlySpeed, 0) end
+                    root.AssemblyLinearVelocity = v
+                end)
+            end)
+        end
+    end
+
+    MoveGroup:AddSlider("PulsarWalkSpeed", { Text = "Скорость", Default = 16, Min = 8, Max = 200, Rounding = 0, Callback = function(v) WalkSpeed = v end })
+
+    MoveGroup:AddSlider("PulsarJumpPower", { Text = "Прыжок", Default = 50, Min = 50, Max = 300, Rounding = 0, Callback = function(v) JumpPower = v end })
+
+    MoveGroup:AddSlider("PulsarFlySpeed", { Text = "Скорость флая", Default = 50, Min = 10, Max = 300, Rounding = 0, Callback = function(v) FlySpeed = v end })
+
+    pcall(function() MoveGroup:AddDivider() end)
+
+    MoveGroup:AddButton({
+        Text = "⚡ Включить скорость",
+        Func = function()
+            pcall(function() GetHumanoid().WalkSpeed = WalkSpeed end)
+            Library:Notify("Скорость: " .. WalkSpeed)
+        end,
+    })
+
+    MoveGroup:AddButton({
+        Text = "⬆ Включить прыжок",
+        Func = function()
+            pcall(function()
+                local h = GetHumanoid()
+                h.UseJumpPower = true
+                h.JumpPower = JumpPower
+            end)
+            Library:Notify("Прыжок: " .. JumpPower)
+        end,
+    })
+
+    FlyBtn = MoveGroup:AddButton({
+        Text = "🕊 Флай: ВЫКЛ",
+        Func = function()
+            FlySet(not FlyOn)
+            pcall(function() FlyBtn:SetText(FlyOn and "🕊 Флай: ВКЛ" or "🕊 Флай: ВЫКЛ") end)
+        end,
+    })
+
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(0.5)
+        pcall(function()
+            local h = GetHumanoid()
+            if h then h.WalkSpeed = WalkSpeed h.UseJumpPower = true h.JumpPower = JumpPower end
+        end)
+    end)
+
+    pcall(function()
+        Library:OnUnload(function()
+            if FlyOn then FlySet(false) end
+        end)
+    end)
+end
