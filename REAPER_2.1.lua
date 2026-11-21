@@ -970,11 +970,14 @@ for _, btn in ipairs({ PlayBtn, PrevBtn, NextBtn }) do
     end)
 end
 
-MusicGroup:AddButton({
+MusicGroup:AddToggle("PulsarVoiceBroadcast", {
     Text = "🎙 Транслировать по войсу",
-    Func = function()
-        Library:Notify("В войс идёт только микрофон устройства — сам звук скриптом туда не подать", 7)
-        Library:Notify("Схема: поставь Voicemeeter, выход Roblox = VAIO, микрофон в Roblox = Voicemeeter Output (B1) — и включи трек в Плеере", 10)
+    Default = false,
+    Callback = function(on)
+        if on then
+            Library:Notify("В войс идёт только микрофон устройства — сам звук скриптом туда не подать", 7)
+            Library:Notify("Схема: поставь Voicemeeter, выход Roblox = VAIO, микрофон в Roblox = Voicemeeter Output (B1) — и включи трек в Плеере", 10)
+        end
     end,
 })
 
