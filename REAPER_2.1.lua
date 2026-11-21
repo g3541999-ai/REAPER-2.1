@@ -2192,7 +2192,8 @@ do
 
     local WalkSpeed, JumpPower, FlySpeed = 16, 50, 50
     local FlyOn, FlyConn = false, nil
-    local FlyBtn
+    local FlyBtn, SpeedBtn, JumpBtn
+    local SpeedOn, JumpOn = false, false
 
     local function GetHumanoid()
         local char = LocalPlayer.Character
@@ -2203,7 +2204,14 @@ do
         FlyOn = on
         if FlyConn then pcall(function() FlyConn:Disconnect() end) FlyConn = nil end
         pcall(function()
-            local hum = GetHumanoid()
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if root then
+                for _, n in ipairs(root:GetChildren()) do
+                    if n.Name == "PulsarFlyGyro" or n.Name == "PulsarFlyVel" then n:Destroy() end
+                end
+            end
             if hum then hum.PlatformStand = false end
         end)
         if on then
@@ -2212,16 +2220,51 @@ do
                     local char = LocalPlayer.Character
                     local root = char and char:FindFirstChild("HumanoidRootPart")
                     local hum = char and char:FindFirstChildOfClass("Humanoid")
-                    if not (root and hum) then return end
+                    local cam = workspace.CurrentCamera
+                    if not (root and hum and cam) then return end
                     hum.PlatformStand = true
-                    local v = hum.MoveDirection * FlySpeed
-                    if UIS:IsKeyDown(Enum.KeyCode.Space) then v += Vector3.new(0, FlySpeed, 0) end
-                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then v -= Vector3.new(0, FlySpeed, 0) end
-                    root.AssemblyLinearVelocity = v
+                    local gyro = root:FindFirstChild("PulsarFlyGyro")
+                    local vel = root:FindFirstChild("PulsarFlyVel")
+                    if not gyro then
+                        gyro = Instance.new("BodyGyro")
+                        gyro.Name = "PulsarFlyGyro"
+                        gyro.P = 9e4
+                        gyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+                        gyro.Parent = root
+                    end
+                    if not vel then
+                        vel = Instance.new("BodyVelocity")
+                        vel.Name = "PulsarFlyVel"
+                        vel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                        vel.Parent = root
+                    end
+                    local cf = cam.CFrame
+                    local move = Vector3.zero
+                    if UIS:IsKeyDown(Enum.KeyCode.W) then move += cf.LookVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cf.LookVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cf.RightVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.D) then move += cf.RightVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.Space) then move += cf.UpVector end
+                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then move -= cf.UpVector end
+                    vel.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.zero
+                    gyro.CFrame = CFrame.new(root.Position, root.Position + cf.LookVector)
                 end)
             end)
         end
     end
+
+    RunService.Heartbeat:Connect(function()
+        pcall(function()
+            local h = GetHumanoid()
+            if h then
+                if SpeedOn then h.WalkSpeed = WalkSpeed end
+                if JumpOn then
+                    h.UseJumpPower = true
+                    h.JumpPower = JumpPower
+                end
+            end
+        end)
+    end)
 
     MoveGroup:AddSlider("PulsarWalkSpeed", { Text = "Скорость", Default = 16, Min = 8, Max = 200, Rounding = 0, Callback = function(v) WalkSpeed = v end })
 
@@ -2231,23 +2274,21 @@ do
 
     pcall(function() MoveGroup:AddDivider() end)
 
-    MoveGroup:AddButton({
-        Text = "⚡ Включить скорость",
+    SpeedBtn = MoveGroup:AddButton({
+        Text = "⚡ Скорость: ВЫКЛ",
         Func = function()
-            pcall(function() GetHumanoid().WalkSpeed = WalkSpeed end)
-            Library:Notify("Скорость: " .. WalkSpeed)
+            SpeedOn = not SpeedOn
+            pcall(function() SpeedBtn:SetText(SpeedOn and "⚡ Скорость: ВКЛ" or "⚡ Скорость: ВЫКЛ") end)
+            Library:Notify(SpeedOn and ("Скорость: " .. WalkSpeed) or "Скорость выключена")
         end,
     })
 
-    MoveGroup:AddButton({
-        Text = "⬆ Включить прыжок",
+    JumpBtn = MoveGroup:AddButton({
+        Text = "⬆ Прыжок: ВЫКЛ",
         Func = function()
-            pcall(function()
-                local h = GetHumanoid()
-                h.UseJumpPower = true
-                h.JumpPower = JumpPower
-            end)
-            Library:Notify("Прыжок: " .. JumpPower)
+            JumpOn = not JumpOn
+            pcall(function() JumpBtn:SetText(JumpOn and "⬆ Прыжок: ВКЛ" or "⬆ Прыжок: ВЫКЛ") end)
+            Library:Notify(JumpOn and ("Прыжок: " .. JumpPower) or "Прыжок выключен")
         end,
     })
 
@@ -2263,7 +2304,8 @@ do
         task.wait(0.5)
         pcall(function()
             local h = GetHumanoid()
-            if h then h.WalkSpeed = WalkSpeed h.UseJumpPower = true h.JumpPower = JumpPower end
+            if h and SpeedOn then h.WalkSpeed = WalkSpeed end
+            if h and JumpOn then h.UseJumpPower = true h.JumpPower = JumpPower end
         end)
     end)
 
