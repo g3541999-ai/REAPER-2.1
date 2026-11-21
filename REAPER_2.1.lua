@@ -492,8 +492,7 @@ local ShaderPresets = {
         Bloom={Intensity=0.9,Threshold=0.75,Size=70}, Blur={Size=0.35},
         ColorCorrection={Brightness=0.06,Saturation=0.18,Contrast=0.17,TintColor=Color3.fromRGB(255,230,255)},
         SunRays={Intensity=0.08,Spread=0.65},
-        Atmosphere={Density=0.28,Offset=0.15,Haze=1.4,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
-    },
+        Atmosphere={Density=0.28,Offset=0.15,Haze=1.4,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},    },
     ["Синтвейв"] = {
         Lighting = { Brightness=2.3, ClockTime=18.3, FogEnd=3500, FogStart=0, FogColor=Color3.fromRGB(180,80,200), ExposureCompensation=0.15, ShadowSoftness=0.3, Ambient=Color3.fromRGB(90,40,120), ColorShift_Bottom=Color3.fromRGB(70,0,95), ColorShift_Top=Color3.fromRGB(255,110,230), OutdoorAmbient=Color3.fromRGB(150,60,140) },
         Bloom={Intensity=0.9,Threshold=0.75,Size=60},
@@ -1038,13 +1037,106 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 local CustomSkySets = {
     ["☁️ Голубые облака"] = { Bk = 225469345, Dn = 225469349, Ft = 225469359, Lf = 225469364, Rt = 225469372, Up = 225469380 },
     ["🌇 Закат с холмами"] = { Bk = 92464172, Dn = 92464250, Ft = 92464217, Lf = 92464234, Rt = 92464189, Up = 92464157 },
-    ["🧱 Небо Minecraft (день)"] = { Model = 2758029221 },
+    ["🧱 MC-небо (квадратное)"] = { MC = true },
 }
-local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами", "🧱 Небо Minecraft (день)" }
+local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами", "🧱 MC-небо (квадратное)" }
 
 local CustomSkyState = { Sky = nil, Backup = nil }
+local MCState = { Root = nil, Sun = nil, Conn = nil, SavedClouds = {}, SavedSky = nil }
+
+local function MCSkyRemove()
+    if MCState.Conn then pcall(function() MCState.Conn:Disconnect() end) MCState.Conn = nil end
+    if MCState.Sun then pcall(function() MCState.Sun:Destroy() end) MCState.Sun = nil end
+    if MCState.Root then pcall(function() MCState.Root:Destroy() end) MCState.Root = nil end
+    for c, _ in pairs(MCState.SavedClouds) do
+        pcall(function() c.Enabled = true end)
+    end
+    MCState.SavedClouds = {}
+    if MCState.SavedSky then
+        pcall(function() MCState.SavedSky.CelestialBodiesShown = true end)
+        MCState.SavedSky = nil
+    end
+end
+
+local function MCSkyApply()
+    if MCState.Root and MCState.Root.Parent then return true end
+    pcall(function()
+        for _, c in ipairs(workspace.Terrain:GetChildren()) do
+            if c:IsA("Clouds") and c.Enabled then
+                MCState.SavedClouds[c] = true
+                c.Enabled = false
+            end
+        end
+        local base = Lighting:FindFirstChildOfClass("Sky")
+        if base and base.CelestialBodiesShown then
+            base.CelestialBodiesShown = false
+            MCState.SavedSky = base
+        end
+    end)
+    local ok, root = pcall(function()
+        local model = Instance.new("Model")
+        model.Name = "PulsarMCSky"
+        local cell, th, radius, height = 96, 8, 10, 340
+        for cx = -radius, radius do
+            for cz = -radius, radius do
+                local n = (cx * 31 + cz * 17) % 10
+                if n >= 4 then
+                    local p = Instance.new("Part")
+                    p.Size = Vector3.new(cell, th, cell)
+                    p.Position = Vector3.new(cx * cell, height + (n % 2) * 3, cz * cell)
+                    p.Anchored = true
+                    p.CanCollide = false
+                    p.CanQuery = false
+                    p.CanTouch = false
+                    p.CastShadow = false
+                    p.Material = Enum.Material.SmoothPlastic
+                    p.Color = Color3.new(1, 1, 1)
+                    p.Transparency = 0.15
+                    p.Parent = model
+                end
+            end
+        end
+        model.Parent = workspace
+        return model
+    end)
+    if not ok or not root then
+        MCSkyRemove()
+        return false
+    end
+    MCState.Root = root
+    local okSun, sun = pcall(function()
+        local sp = Instance.new("Part")
+        sp.Name = "PulsarMCSun"
+        sp.Size = Vector3.new(90, 90, 1)
+        sp.Anchored = true
+        sp.CanCollide = false
+        sp.CanQuery = false
+        sp.CanTouch = false
+        sp.CastShadow = false
+        sp.Material = Enum.Material.Neon
+        sp.Color = Color3.fromRGB(255, 235, 160)
+        sp.Parent = workspace
+        return sp
+    end)
+    if not okSun or not sun then
+        MCSkyRemove()
+        return false
+    end
+    MCState.Sun = sun
+    MCState.Conn = RunService.Heartbeat:Connect(function()
+        local cam = workspace.CurrentCamera
+        if cam and sun.Parent then
+            local dir = Vector3.new(0.45, 0.6, 0.25).Unit
+            pcall(function()
+                sun.CFrame = CFrame.lookAt(cam.CFrame.Position + dir * 900, cam.CFrame.Position)
+            end)
+        end
+    end)
+    return true
+end
 
 local function CustomSkyRemove()
+    if MCSkyRemove then pcall(MCSkyRemove) end
     if CustomSkyState.Sky then
         pcall(function() CustomSkyState.Sky:Destroy() end)
         CustomSkyState.Sky = nil
@@ -1065,24 +1157,8 @@ PulsarCustomSkyOff = CustomSkyRemove
 local function CustomSkyApply(faces)
     if not faces then return false end
     CustomSkyRemove()
-    if faces.Model then
-        local ok, objs = pcall(function() return game:GetObjects("rbxassetid://" .. faces.Model) end)
-        local src = nil
-        if ok and objs then
-            for _, o in ipairs(objs) do
-                if o:IsA("Sky") then src = o break end
-                src = o:FindFirstChildWhichIsA("Sky", true)
-                if src then break end
-            end
-        end
-        if src then
-            src.Name = "PulsarCustomSky"
-            src.Parent = Lighting
-            CustomSkyState.Sky = src
-            return true
-        end
-        Library:Notify("Модель неба не загрузилась")
-        return false
+    if faces.MC then
+        return MCSkyApply()
     end
     pcall(function()
         local old = Lighting:FindFirstChildOfClass("Sky")
@@ -1147,6 +1223,9 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
             end
             if CustomSkyApply(faces) then
                 Library:Notify("Небо поставлено — вся карта видна")
+            else
+                Library:Notify("Не удалось создать MC-небо")
+                pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
             end
         else
             CustomSkyRemove()
