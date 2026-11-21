@@ -790,6 +790,29 @@ local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false, Cus
 local MusicPlayBtn, NowPlayingLabel = nil, nil
 local MusicPlay = nil
 
+local MusicHeadOn = false
+local function MusicHeadAttach()
+    pcall(function()
+        local s = MusicPlayer.Sound
+        local char = LocalPlayer.Character
+        local head = char and char:FindFirstChild("Head")
+        if MusicHeadOn and s and head then
+            s.Parent = head
+            s.RollOffMode = Enum.RollOffMode.InverseTapered
+            s.RollOffMaxDistance = 60
+        end
+    end)
+end
+local function MusicHeadDetach()
+    pcall(function()
+        local s = MusicPlayer.Sound
+        if s then
+            s.Parent = SoundService
+            s.RollOffMaxDistance = 10000
+        end
+    end)
+end
+
 local function SetPlayBtnText(text)
     if MusicPlayBtn then
         pcall(function() MusicPlayBtn:SetText(text) end)
@@ -870,6 +893,7 @@ function MusicPlay()
     MusicPlayer.Paused = false
     s:Play()
     SetPlayBtnText("| |")
+    if MusicHeadOn then task.spawn(MusicHeadAttach) end
 end
 
 local MusicGroup = TabObjects["Music"]:AddLeftGroupbox("Плеер")
@@ -920,6 +944,15 @@ MusicGroup:AddSlider("PulsarMusicVolume", {
     end,
 })
 
+MusicGroup:AddToggle("PulsarMusicHead", {
+    Text = "🔊 Музыка над головой (слышат рядом)",
+    Default = false,
+    Callback = function(on)
+        MusicHeadOn = on
+        if on then MusicHeadAttach() else MusicHeadDetach() end
+    end,
+})
+
 MusicGroup:AddInput("PulsarMusicCustomId", {
     Text = "Свой трек (ID)",
     Placeholder = "Вставь ID аудио…",
@@ -952,6 +985,7 @@ MusicGroup:AddButton({
         MusicPlayer.CustomName = "Свой трек (ID: " .. id .. ")"
         s:Play()
         SetPlayBtnText("| |")
+        if MusicHeadOn then task.spawn(MusicHeadAttach) end
     end,
 })
 
@@ -1044,29 +1078,6 @@ local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат 
 local CustomSkyState = { Sky = nil, Backup = nil }
 local MCState = { Root = nil, Sun = nil, Conn = nil, SavedClouds = {}, SavedSky = nil }
 
-local function MCHash(x, z)
-    local n = math.sin(x * 127.1 + z * 311.7) * 43758.5453
-    return n - math.floor(n)
-end
-
-local function MCNoise(x, z, freq)
-    local fx, fz = x * freq, z * freq
-    local ix, iz = math.floor(fx), math.floor(fz)
-    local tx, tz = fx - ix, fz - iz
-    local sx = tx * tx * (3 - 2 * tx)
-    local sz = tz * tz * (3 - 2 * tz)
-    local a, b = MCHash(ix, iz), MCHash(ix + 1, iz)
-    local c, d = MCHash(ix, iz + 1), MCHash(ix + 1, iz + 1)
-    local top = a + (b - a) * sx
-    local bot = c + (d - c) * sx
-    return top + (bot - top) * sz
-end
-
-local function MCCloud(x, z)
-    local v = MCNoise(x, z * 0.75, 0.1) * 0.55 + MCNoise(x, z * 0.75, 0.26) * 0.25 + MCHash(x, z) * 0.2
-    return v >= 0.575
-end
-
 local function MCSkyRemove()
     if MCState.Conn then pcall(function() MCState.Conn:Disconnect() end) MCState.Conn = nil end
     if MCState.Sun then pcall(function() MCState.Sun:Destroy() end) MCState.Sun = nil end
@@ -1102,10 +1113,11 @@ local function MCSkyApply()
         local cell, th, radius, height = 96, 8, 10, 340
         for cx = -radius, radius do
             for cz = -radius, radius do
-                if MCCloud(cx, cz) then
+                local n = (cx * 31 + cz * 17) % 10
+                if n >= 4 then
                     local p = Instance.new("Part")
                     p.Size = Vector3.new(cell, th, cell)
-                    p.Position = Vector3.new(cx * cell, height, cz * cell)
+                    p.Position = Vector3.new(cx * cell, height + (n % 2) * 3, cz * cell)
                     p.Anchored = true
                     p.CanCollide = false
                     p.CanQuery = false
