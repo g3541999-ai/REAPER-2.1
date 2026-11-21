@@ -781,6 +781,10 @@ local MusicTracks = {
     ["Voltstorm (Overload Phonk Energy)"] = 140580823167015,
     ["Desprezo, (Aggressive Phonk), Slowed + Reverb"] = 140667339171815,
     ["HYDERABADI PHONK (MARFA STYLE)"] = 140691985128867,
+    ["Elpaparon"] = 121336955981923,
+    ["test1"] = 86255623393834,
+    ["Лава Лава"] = 115410878431589,
+    ["russian mem"] = 128015593975204,
 }
 
 local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false, CustomName = nil }
@@ -1034,8 +1038,9 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 local CustomSkySets = {
     ["☁️ Голубые облака"] = { Bk = 225469345, Dn = 225469349, Ft = 225469359, Lf = 225469364, Rt = 225469372, Up = 225469380 },
     ["🌇 Закат с холмами"] = { Bk = 92464172, Dn = 92464250, Ft = 92464217, Lf = 92464234, Rt = 92464189, Up = 92464157 },
+    ["🧱 Небо Minecraft (день)"] = { Model = 2758029221 },
 }
-local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами" }
+local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами", "🧱 Небо Minecraft (день)" }
 
 local CustomSkyState = { Sky = nil, Backup = nil }
 
@@ -1058,8 +1063,27 @@ end
 PulsarCustomSkyOff = CustomSkyRemove
 
 local function CustomSkyApply(faces)
-    if not faces then return end
+    if not faces then return false end
     CustomSkyRemove()
+    if faces.Model then
+        local ok, objs = pcall(function() return game:GetObjects("rbxassetid://" .. faces.Model) end)
+        local src = nil
+        if ok and objs then
+            for _, o in ipairs(objs) do
+                if o:IsA("Sky") then src = o break end
+                src = o:FindFirstChildWhichIsA("Sky", true)
+                if src then break end
+            end
+        end
+        if src then
+            src.Name = "PulsarCustomSky"
+            src.Parent = Lighting
+            CustomSkyState.Sky = src
+            return true
+        end
+        Library:Notify("Модель неба не загрузилась")
+        return false
+    end
     pcall(function()
         local old = Lighting:FindFirstChildOfClass("Sky")
         if old then
@@ -1082,6 +1106,7 @@ local function CustomSkyApply(faces)
     sky.SkyboxUp = "rbxassetid://" .. faces.Up
     sky.Parent = Lighting
     CustomSkyState.Sky = sky
+    return true
 end
 
 local CustomSkyGroup = VisualTab:AddLeftGroupbox("Настоящее небо")
@@ -1120,8 +1145,9 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
                 pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
                 return
             end
-            CustomSkyApply(faces)
-            Library:Notify("Небо поставлено — вся карта видна")
+            if CustomSkyApply(faces) then
+                Library:Notify("Небо поставлено — вся карта видна")
+            end
         else
             CustomSkyRemove()
             Library:Notify("Своё прежнее небо возвращено")
