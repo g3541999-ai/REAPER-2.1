@@ -733,7 +733,6 @@ local MusicTracks = {
     ["AURA = ∞ (Brazilian Phonk)"] = 95131770144654,
     ["ROBLOX PHONK"] = 136932193331774,
     ["FUNK FESTA"] = 103409297553965,
-    ["67 KID PHONK"] = 125476440612900,
     ["DRIFT NIGHT PHONK (Car Motion Edit)"] = 85735197482652,
     ["Rat Dance Phonk"] = 119598380829349,
     ["Lost Phonk"] = 139266399633943,
