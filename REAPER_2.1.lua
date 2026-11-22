@@ -1287,26 +1287,29 @@ local function TIsPartOwner(part)
     return false
 end
 
-local function TIsOwner(part)
-    if not (part and part:IsA("BasePart")) then return false end
-    local asm = part.AssemblyRootPart or part
-    return not asm.Anchored and asm.ReceiveAge == 0
+local function TGrabFrame(part)
+    local myChar, myRoot = TChar(LocalPlayer)
+    if not myRoot then return part.CFrame end
+    local from = myRoot.Position + Vector3.new(0, 1.593, 0)
+    local ok, cf = pcall(function() return CFrame.new(from, part.Position) end)
+    if ok and cf then return cf end
+    return part.CFrame
 end
 
 local function TSNO(part, timeout)
     if not (part and part:IsA("BasePart")) then return false end
-    if TIsOwner(part) or TIsPartOwner(part) then return true end
+    if TIsPartOwner(part) then return true end
     if not SNORemote then return false end
     local step = (ResT.DelayMode == "Normal") and 0.1 or 0.05
     if ResT.EKI then step = 0.04 end
     local limit = timeout or (ResT.EKI and 2.5 or 1.2)
     local t0 = os.clock()
     while part.Parent and os.clock() - t0 < limit do
-        pcall(function() SNORemote:FireServer(part, part.CFrame) end)
+        pcall(function() SNORemote:FireServer(part, TGrabFrame(part)) end)
         task.wait(step)
-        if TIsPartOwner(part) or TIsOwner(part) then return true end
+        if TIsPartOwner(part) then return true end
     end
-    return TIsPartOwner(part) or TIsOwner(part)
+    return TIsPartOwner(part)
 end
 
 local function TResetVelocity(obj)
@@ -1468,7 +1471,7 @@ local function TBring(plr)
     local char, root, hum = TChar(plr)
     local myChar, myRoot, myHum = TChar(LocalPlayer)
     if not (root and hum and hum.Health > 0 and myRoot and myHum and myHum.Health > 0) then return end
-    if not TIsOwner(root) and not TSNO(root) then return end
+    if not TSNO(root) then return end
     local goal = myRoot.CFrame * CFrame.new(0, 0, -5)
     local parts = char:GetDescendants()
     for _ = 1, 3 do
