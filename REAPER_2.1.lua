@@ -1294,6 +1294,11 @@ local function TIsNetworkOwner(part)
 end
 
 local function TGrab(part)
+    if not SNORemote then
+        pcall(function()
+            SNORemote = ReplicatedStorage:WaitForChild("GrabEvents", 3):WaitForChild("SetNetworkOwner", 3)
+        end)
+    end
     local myChar, myRoot = TChar(LocalPlayer)
     if not (myRoot and part and part.Parent and part:IsA("BasePart") and SNORemote) then return end
     local base = myRoot.CFrame * CFrame.new(0, 1.593, 0)
@@ -1806,6 +1811,31 @@ end
 
 Players.PlayerAdded:Connect(function() task.defer(RefreshTargetPlayers) end)
 Players.PlayerRemoving:Connect(function() task.defer(RefreshTargetPlayers) end)
+
+TargetGroup:AddButton({
+    Text = "Тест захвата",
+    Tooltip = "Проверяет ремоут и захват выбранной жертвы — скажи, что напишет",
+    Func = function()
+        local plr = next(ResT.Selected)
+        if not plr then
+            Library:Notify("Тест: сначала выбери жертву в Targets")
+            return
+        end
+        local char, root, hum = TChar(plr)
+        if not root then
+            Library:Notify("Тест: у жертвы нет персонажа")
+            return
+        end
+        local myChar, myRoot = TChar(LocalPlayer)
+        local dist = (myRoot and root) and math.floor((myRoot.Position - root.Position).Magnitude) or -1
+        Library:Notify("Тест: ремоут SetNetworkOwner " .. (SNORemote and "найден" or "НЕ найден"))
+        Library:Notify("Тест: дистанция " .. dist .. " стадов")
+        task.spawn(function()
+            local got = TSNO(root, 2)
+            Library:Notify("Тест: захват " .. (got and "OK" or "НЕ удался"))
+        end)
+    end,
+})
 
 TargetGroup:AddButton({
     Text = "Добавить игрока под курсором",
