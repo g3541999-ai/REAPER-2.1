@@ -674,7 +674,7 @@ local PulsarSoundMuteOff
 local GfxUnload
 local PulsarMusicStop
 local PulsarCustomSkyOff
-local PulsarWaterOff
+local PulsarTargetHoldOff
 
 local function VisualsCleanup()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
@@ -682,7 +682,7 @@ local function VisualsCleanup()
     if PulsarCustomSkyOff then pcall(PulsarCustomSkyOff) end
     if GfxUnload then pcall(GfxUnload) end
     if PulsarMusicStop then pcall(PulsarMusicStop) end
-    if PulsarWaterOff then pcall(PulsarWaterOff) end
+    if PulsarTargetHoldOff then pcall(PulsarTargetHoldOff) end
     pcall(function() LockGui:Destroy() end)
 end
 
@@ -1201,6 +1201,89 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
             CustomSkyRemove()
             Library:Notify("Своё прежнее небо возвращено")
         end
+    end,
+})
+
+local TargetGroup = TabObjects["Target"]:AddLeftGroupbox("Удержание")
+
+local HoldState = { On = false, Conn = nil, Height = 20 }
+
+local function HoldTargetRoot()
+    local name = nil
+    pcall(function() name = Library.Options.PulsarHoldTarget.Value end)
+    if type(name) ~= "string" or name == "" then return nil end
+    local plr = Players:FindFirstChild(name)
+    local char = plr and plr.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function HoldStop()
+    if HoldState.Conn then
+        pcall(function() HoldState.Conn:Disconnect() end)
+        HoldState.Conn = nil
+    end
+    HoldState.On = false
+end
+PulsarTargetHoldOff = HoldStop
+
+TargetGroup:AddDropdown("PulsarHoldTarget", {
+    Values = BuildPlayerValues(),
+    ValueImages = PlayerImages,
+    Multi = false,
+    AllowNull = true,
+    Searchable = true,
+    Text = "Игрок",
+    Callback = function() end,
+})
+
+local function RefreshHoldTarget()
+    local opts = Library.Options and Library.Options.PulsarHoldTarget
+    if not opts then return end
+    local values = BuildPlayerValues()
+    pcall(function() opts.ValueImages = PlayerImages end)
+    local ok = pcall(function() opts:SetValues(values) end)
+    if not ok then
+        pcall(function() opts.Values = values end)
+    end
+end
+
+Players.PlayerAdded:Connect(function() task.defer(RefreshHoldTarget) end)
+Players.PlayerRemoving:Connect(function() task.defer(RefreshHoldTarget) end)
+
+TargetGroup:AddToggle("PulsarHoldOn", {
+    Text = "🔒 Держать над землёй",
+    Default = false,
+    Callback = function(on)
+        HoldStop()
+        if on then
+            HoldState.Conn = RunService.Heartbeat:Connect(function()
+                pcall(function()
+                    local root = HoldTargetRoot()
+                    if not root then return end
+                    local params = RaycastParams.new()
+                    params.FilterType = Enum.RaycastFilterType.Exclude
+                    params.FilterDescendantsInstances = { root.Parent }
+                    local hit = workspace:Raycast(root.Position, Vector3.new(0, -1000, 0), params)
+                    local groundY = hit and hit.Position.Y or root.Position.Y
+                    local goal = Vector3.new(root.Position.X, groundY + HoldState.Height, root.Position.Z)
+                    root.AssemblyLinearVelocity = Vector3.zero
+                    root.CFrame = CFrame.new(goal) * root.CFrame.Rotation
+                end)
+            end)
+            HoldState.On = true
+            Library:Notify("Держу игрока над землёй — выбери цель в списке выше")
+        end
+    end,
+})
+
+TargetGroup:AddSlider("PulsarHoldHeight", {
+    Text = "Высота",
+    Default = 20,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(v)
+        HoldState.Height = v
     end,
 })
 
@@ -1874,7 +1957,7 @@ pcall(function()
     FogToggle:AddColorPicker("PulsarFogColor", {
         Default = FogState.Color, Title = "Цвет тумана",
         Callback = function(v)
-            FogState.On = FogState.On
+            FogState.Color = v
             if FogState.On then FogApply() end
         end,
     })
@@ -1887,223 +1970,6 @@ FogGroup:AddSlider("PulsarFogDensity", {
     end,
 })
 pcall(function() Library:OnUnload(FogRestore) end)
-
-local WaterGroup = VisualTab:AddRightGroupbox("Вода")
-
-local WaterState = { Touched = {}, Conn = nil, StyleTouched = {}, StyleConn = nil, SurfaceY = nil }
-
-local SwimState = { On = false, Conn = nil, Speed = 16 }
-
-local function IsWater(inst)
-    if not inst:IsA("BasePart") then return false end
-    if inst:IsA("Terrain") then return false end
-    local n = string.lower(inst.Name)
-    if string.find(n, "water", 1, true) then return true end
-    if string.find(n, "sea", 1, true) then return true end
-    if string.find(n, "ocean", 1, true) then return true end
-    if string.find(n, "wave", 1, true) then return true end
-    return false
-end
-
-local function WaterSetSolid(solid)
-    if solid then
-        table.clear(WaterState.Touched)
-        local t0 = os.clock()
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if IsWater(obj) and obj.CanCollide == false then
-                pcall(function()
-                    WaterState.Touched[obj] = false
-                    obj.CanCollide = true
-                end)
-            end
-            if os.clock() - t0 > 0.1 then
-                task.wait()
-                t0 = os.clock()
-            end
-        end
-        if not WaterState.Conn then
-            WaterState.Conn = workspace.DescendantAdded:Connect(function(obj)
-                task.defer(function()
-                    if WaterState.Conn and IsWater(obj) and obj.CanCollide == false then
-                        pcall(function()
-                            WaterState.Touched[obj] = false
-                            obj.CanCollide = true
-                        end)
-                    end
-                end)
-            end)
-        end
-    else
-        if WaterState.Conn then
-            pcall(function() WaterState.Conn:Disconnect() end)
-            WaterState.Conn = nil
-        end
-        for obj, _prev in pairs(WaterState.Touched) do
-            if typeof(obj) == "Instance" and obj.Parent then
-                pcall(function() obj.CanCollide = false end)
-            end
-        end
-        table.clear(WaterState.Touched)
-    end
-end
-local function WaterStyleApplyOne(obj)
-    if WaterState.StyleTouched[obj] then return end
-    local orig = {}
-    pcall(function()
-        orig.Color = obj.Color
-        orig.Material = obj.Material
-        orig.Transparency = obj.Transparency
-        orig.Reflectance = obj.Reflectance
-        obj.Material = Enum.Material.Glass
-        obj.Color = Color3.fromRGB(55, 140, 220)
-        obj.Transparency = 0.25
-        obj.Reflectance = 0.08
-    end)
-    WaterState.StyleTouched[obj] = orig
-end
-
-local function WaterStyleScan()
-    local bestVol, bestTop = 0, nil
-    local t0 = os.clock()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if IsWater(obj) then
-            WaterStyleApplyOne(obj)
-            local vol = math.abs(obj.Size.X * obj.Size.Y * obj.Size.Z)
-            local top = obj.Position.Y + obj.Size.Y / 2
-            if vol > bestVol then
-                bestVol = vol
-                bestTop = top
-            end
-        end
-        if os.clock() - t0 > 0.1 then
-            task.wait()
-            t0 = os.clock()
-        end
-    end
-    if bestTop then WaterState.SurfaceY = bestTop end
-end
-
-local function WaterStyleOff()
-    if WaterState.StyleConn then
-        pcall(function() WaterState.StyleConn:Disconnect() end)
-        WaterState.StyleConn = nil
-    end
-    for obj, orig in pairs(WaterState.StyleTouched) do
-        if typeof(obj) == "Instance" and obj.Parent then
-            pcall(function()
-                obj.Color = orig.Color
-                obj.Material = orig.Material
-                obj.Transparency = orig.Transparency
-                obj.Reflectance = orig.Reflectance
-            end)
-        end
-    end
-    table.clear(WaterState.StyleTouched)
-    WaterState.SurfaceY = nil
-end
-
-local function SwimSet(on)
-    SwimState.On = on
-    if SwimState.Conn then
-        pcall(function() SwimState.Conn:Disconnect() end)
-        SwimState.Conn = nil
-    end
-    if on then
-        SwimState.Conn = RunService.Heartbeat:Connect(function()
-            pcall(function()
-                local char = LocalPlayer.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                local cam = workspace.CurrentCamera
-                if not (root and hum and cam) then return end
-                local surface = WaterState.SurfaceY
-                if not surface or root.Position.Y >= surface then return end
-                if hum:GetState() ~= Enum.HumanoidStateType.Swimming then
-                    hum:ChangeState(Enum.HumanoidStateType.Swimming)
-                end
-                local cf = cam.CFrame
-                local move = Vector3.zero
-                if LockInput:IsKeyDown(Enum.KeyCode.W) then move += cf.LookVector end
-                if LockInput:IsKeyDown(Enum.KeyCode.S) then move -= cf.LookVector end
-                if LockInput:IsKeyDown(Enum.KeyCode.A) then move -= cf.RightVector end
-                if LockInput:IsKeyDown(Enum.KeyCode.D) then move += cf.RightVector end
-                if LockInput:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.yAxis end
-                if LockInput:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.yAxis end
-                local target
-                if move.Magnitude > 0 then
-                    target = move.Unit * SwimState.Speed
-                else
-                    target = Vector3.new(0, math.sin(os.clock() * 2) * 1.5, 0)
-                end
-                root.AssemblyLinearVelocity = root.AssemblyLinearVelocity:Lerp(target, 0.25)
-            end)
-        end)
-    end
-end
-
-PulsarWaterOff = function()
-    SwimSet(false)
-    WaterStyleOff()
-    WaterSetSolid(false)
-end
-
-WaterGroup:AddToggle("PulsarWaterSolid", {
-    Text = "Сделать воду физичной",
-    Default = false,
-    Callback = function(on)
-        if on then
-            WaterSetSolid(true)
-            Library:Notify("Вода твёрдая — попробуй наступить на неё")
-        else
-            WaterSetSolid(false)
-            Library:Notify("Вода снова нефизичная")
-        end
-    end,
-})
-
-WaterGroup:AddToggle("PulsarWaterReal", {
-    Text = "🌊 Красивая вода + плавание",
-    Default = false,
-    Callback = function(on)
-        if on then
-            WaterStyleScan()
-            if not WaterState.StyleConn then
-                WaterState.StyleConn = workspace.DescendantAdded:Connect(function(obj)
-                    task.defer(function()
-                        if WaterState.StyleConn and IsWater(obj) then
-                            pcall(function()
-                                WaterStyleApplyOne(obj)
-                                if not WaterState.SurfaceY then
-                                    local vol = math.abs(obj.Size.X * obj.Size.Y * obj.Size.Z)
-                                    if vol > 10000 then
-                                        WaterState.SurfaceY = obj.Position.Y + obj.Size.Y / 2
-                                    end
-                                end
-                            end)
-                        end
-                    end)
-                end)
-            end
-            SwimSet(true)
-            Library:Notify("Вода как в Roblox: WASD плыть, Space вверх, Ctrl вниз", 7)
-        else
-            SwimSet(false)
-            WaterStyleOff()
-            Library:Notify("Вода возвращена как была")
-        end
-    end,
-})
-
-WaterGroup:AddSlider("PulsarWaterSwimSpeed", {
-    Text = "Скорость плавания",
-    Default = 16,
-    Min = 4,
-    Max = 100,
-    Rounding = 0,
-    Callback = function(v)
-        SwimState.Speed = v
-    end,
-})
 
 do
     local HttpService = game:GetService("HttpService")
