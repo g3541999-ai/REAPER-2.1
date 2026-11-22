@@ -416,7 +416,7 @@ HomeGroup:AddButton({
             name = val
         end
         if type(name) ~= "string" or name == "" then
-            Library:Notify("Сначало выбери игрока в списке выше")
+            Library:Notify("Сначала выбери игрока в списке выше")
             return
         end
         if CopyText(name) then
@@ -465,7 +465,7 @@ local ShaderPresets = {
         ColorCorrection={Brightness=0.06,Saturation=0.18,Contrast=0.17,TintColor=Color3.fromRGB(255,230,255)},
         SunRays={Intensity=0.08,Spread=0.65},
         Atmosphere={Density=0.28,Offset=0.15,Haze=1.4,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},    },
-    ["Синтвейв"] = {
+    ["Синтивейв"] = {
         Lighting = { Brightness=2.3, ClockTime=18.3, FogEnd=3500, FogStart=0, FogColor=Color3.fromRGB(180,80,200), ExposureCompensation=0.15, ShadowSoftness=0.3, Ambient=Color3.fromRGB(90,40,120), ColorShift_Bottom=Color3.fromRGB(70,0,95), ColorShift_Top=Color3.fromRGB(255,110,230), OutdoorAmbient=Color3.fromRGB(150,60,140) },
         Bloom={Intensity=0.9,Threshold=0.75,Size=60},
         ColorCorrection={Saturation=0.35,Contrast=0.25,TintColor=Color3.fromRGB(255,205,255)},
@@ -488,7 +488,7 @@ local ShaderPresets = {
     },
 }
 
-local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Dreamy", "Синтвейв", "Lavender Fields", "Slender" }
+local ShaderOrder = { "Scarlet Atmosphere", "Golden Hour", "Dreamy", "Синтивейв", "Lavender Fields", "Slender" }
 
 local Original = { Lighting = {}, Sky = nil, Atmosphere = nil, Saved = false }
 local ActiveEffects = {}
@@ -642,7 +642,7 @@ local function ApplyShader(shaderName, level)
         sky.SunAngularSize = 14
         ActiveEffects[#ActiveEffects+1] = sky
     end
-    if shaderName == "Синтвейв" then
+    if shaderName == "Синтивейв" then
         local swSky = Instance.new("Sky", Lighting)
         swSky.Name = "SavitarSynthSky"
         swSky.SkyboxUp = "rbxassetid://323493360"
@@ -917,7 +917,7 @@ MusicGroup:AddToggle("PulsarMusicHead", {
 })
 
 MusicGroup:AddInput("PulsarMusicCustomId", {
-    Text = "Свой трек (ID)",
+    Text = "Своя трек (ID)",
     Placeholder = "Вставь ID аудио…",
 })
 MusicGroup:AddButton({
@@ -1024,10 +1024,10 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
 
 local CustomSkySets = {
     ["☁️ Голубые облака"] = { Bk = 225469345, Dn = 225469349, Ft = 225469359, Lf = 225469364, Rt = 225469372, Up = 225469380 },
-    ["🌆 Закат с холмами"] = { Bk = 92464172, Dn = 92464250, Ft = 92464217, Lf = 92464234, Rt = 92464189, Up = 92464157 },
+    ["🌇 Закат с холмами"] = { Bk = 92464172, Dn = 92464250, Ft = 92464217, Lf = 92464234, Rt = 92464189, Up = 92464157 },
     ["🧱 MC-небо (квадратное)"] = { MC = true },
 }
-local CustomSkyOrder = { "☁️ Голубые облака", "🌆 Закат с холмами", "🧱 MC-небо (квадратное)" }
+local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами", "🧱 MC-небо (квадратное)" }
 
 local CustomSkyState = { Sky = nil, Backup = nil }
 local MCState = { Root = nil, Sun = nil, Conn = nil, SavedClouds = {}, SavedSky = nil }
@@ -1287,29 +1287,33 @@ local function TIsPartOwner(part)
     return false
 end
 
-local function TGrabFrame(part)
+local function TIsNetworkOwner(part)
+    if not (part and part:IsA("BasePart")) then return false end
+    local asm = part.AssemblyRootPart or part
+    return not asm.Anchored and asm.ReceiveAge == 0
+end
+
+local function TGrab(part)
     local myChar, myRoot = TChar(LocalPlayer)
-    if not myRoot then return part.CFrame end
-    local from = myRoot.Position + Vector3.new(0, 1.593, 0)
-    local ok, cf = pcall(function() return CFrame.new(from, part.Position) end)
-    if ok and cf then return cf end
-    return part.CFrame
+    if not (myRoot and part and part.Parent and part:IsA("BasePart") and SNORemote) then return end
+    local base = myRoot.CFrame * CFrame.new(0, 1.593, 0)
+    pcall(function()
+        SNORemote:FireServer(part, CFrame.new(base.Position, part.CFrame.Position))
+    end)
 end
 
 local function TSNO(part, timeout)
     if not (part and part:IsA("BasePart")) then return false end
-    if TIsPartOwner(part) then return true end
+    if TIsPartOwner(part) or TIsNetworkOwner(part) then return true end
     if not SNORemote then return false end
-    local step = (ResT.DelayMode == "Normal") and 0.1 or 0.05
-    if ResT.EKI then step = 0.04 end
-    local limit = timeout or (ResT.EKI and 2.5 or 1.2)
+    local limit = timeout or 1
     local t0 = os.clock()
     while part.Parent and os.clock() - t0 < limit do
-        pcall(function() SNORemote:FireServer(part, TGrabFrame(part)) end)
-        task.wait(step)
-        if TIsPartOwner(part) then return true end
+        TGrab(part)
+        task.wait()
+        if TIsPartOwner(part) or TIsNetworkOwner(part) then return true end
     end
-    return TIsPartOwner(part)
+    return TIsPartOwner(part) or TIsNetworkOwner(part)
 end
 
 local function TResetVelocity(obj)
@@ -1471,7 +1475,7 @@ local function TBring(plr)
     local char, root, hum = TChar(plr)
     local myChar, myRoot, myHum = TChar(LocalPlayer)
     if not (root and hum and hum.Health > 0 and myRoot and myHum and myHum.Health > 0) then return end
-    if not TSNO(root) then return end
+    if not TIsNetworkOwner(root) and not TSNO(root) then return end
     local goal = myRoot.CFrame * CFrame.new(0, 0, -5)
     local parts = char:GetDescendants()
     for _ = 1, 3 do
@@ -1491,7 +1495,14 @@ local function TVoid(plr)
     if not (hum and hum.Health ~= 0 and root and char) then return end
     local spawnLoc = workspace:FindFirstChild("SpawnLocation")
     if spawnLoc and (spawnLoc.Position - root.Position).Magnitude >= 15000 then return end
-    if not TSNO(root) then return end
+    if not TSNO(root) then
+        local t = os.clock()
+        if t - (ResT.NotifCd or 0) > 4 then
+            ResT.NotifCd = t
+            Library:Notify("Не получил жертву — подойди ближе и попробуй снова")
+        end
+        return
+    end
     local cf = CFrame.new(0, 9e9, 0)
     TPivotTo(char, cf * root.CFrame:Inverse() * char:GetPivot())
     TTeleport(root, cf)
@@ -1902,7 +1913,7 @@ KickBox:AddSlider("HeightNK", {
 })
 KickBox:AddButton({
     Text = "TP To Void Platform",
-    Tooltip = "Телепорт на платформу, где жертва не сможет кидать анти-кик сюрискены",
+    Tooltip = "Телепорт на платформу, где жертва не сможет кидать анти-кик сюрикены",
     Func = function()
         local myChar, myRoot, myHum = TChar(LocalPlayer)
         if not myRoot then return end
