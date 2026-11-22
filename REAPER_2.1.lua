@@ -1420,6 +1420,23 @@ local function TRemoveSticky(char)
     end)
 end
 
+local function TApproach(root)
+    local myChar, myRoot, myHum = TChar(LocalPlayer)
+    if not (myRoot and myHum and myHum.Health > 0 and root and root.Parent) then return nil end
+    if (myRoot.Position - root.Position).Magnitude <= 40 then return nil end
+    local back = myRoot.CFrame
+    TTeleport(myRoot, root.CFrame - Vector3.new(0, 12, 0))
+    return back
+end
+
+local function TReturn(back)
+    if not back then return end
+    task.delay(0.6, function()
+        local myChar, myRoot = TChar(LocalPlayer)
+        if myRoot and myRoot.Parent then TTeleport(myRoot, back) end
+    end)
+end
+
 local function TRagdoll(char, root, hum)
     if not (char and root and hum) or ResT.Ragdolling then return false end
     local rh = hum:FindFirstChild("Ragdolled")
@@ -1495,7 +1512,9 @@ local function TVoid(plr)
     if not (hum and hum.Health ~= 0 and root and char) then return end
     local spawnLoc = workspace:FindFirstChild("SpawnLocation")
     if spawnLoc and (spawnLoc.Position - root.Position).Magnitude >= 15000 then return end
-    if not TSNO(root) then
+    local back = TApproach(root)
+    if not TSNO(root, 2) then
+        TReturn(back)
         local t = os.clock()
         if t - (ResT.NotifCd or 0) > 4 then
             ResT.NotifCd = t
@@ -1510,6 +1529,7 @@ local function TVoid(plr)
     task.delay(0.35, function()
         if root.Parent then TRNO(root) end
     end)
+    TReturn(back)
 end
 
 local function TKill(plr)
@@ -1518,9 +1538,10 @@ local function TKill(plr)
     local spawnLoc = workspace:FindFirstChild("SpawnLocation")
     if spawnLoc and (spawnLoc.Position - root.Position).Magnitude >= 15000 then return end
     ResT.KillCd[char] = true
+    local back = TApproach(root)
     hum.BreakJointsOnDeath = false
     pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
-    if TSNO(root) then
+    if TSNO(root, 2) then
         pcall(function()
             workspace.FallenPartsDestroyHeight = -100
             TPivotTo(char, CFrame.new(0, -11111, 0))
@@ -1532,6 +1553,7 @@ local function TKill(plr)
             end)
         end)
     end
+    TReturn(back)
     task.delay(1, function() ResT.KillCd[char] = nil end)
 end
 
