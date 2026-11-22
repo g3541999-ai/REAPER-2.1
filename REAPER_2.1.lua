@@ -1,11 +1,5 @@
--- PULSAR 2.3 — OBSIDIAN EDITION + SAVITAR SHADERS
--- ==========================================
-
 local TweenService = game:GetService("TweenService")
 
--- =====================================================================
--- КАРТОЧКА FPS | ПИНГ (одна строка, чёрная, сверху по центру, перетаскиваемая)
--- =====================================================================
 local LockGui = Instance.new("ScreenGui")
 LockGui.Name = "PulsarLock"
 LockGui.ResetOnSpawn = false
@@ -139,7 +133,6 @@ local Window = Library:CreateWindow({
 pcall(function() Window:SetCornerRadius(8) end)
 pcall(function() LockGui.Enabled = true end)
 
--- ПОИСК: квадратик 36x36 с лупой рядом с кнопкой перетаскивания панели, при клике разворачивается в строку
 local SearchCollapseSize = UDim2.fromOffset(36, 36)
 task.spawn(function()
     local root = (gethui and gethui()) or game:GetService("CoreGui")
@@ -184,7 +177,6 @@ task.spawn(function()
     end))
 end)
 
--- ПЕРЕКЛЮЧАТЕЛИ: квадратные чекбоксы без ползунка, при включении загораются цветом панели
 task.spawn(function()
     local root = (gethui and gethui()) or game:GetService("CoreGui")
     local function FindSwitchParts(d)
@@ -450,29 +442,9 @@ HomeGroup:AddButton({
     end
 })
 
--- =====================================================================
--- SAVITAR SHADERS — ДВИЖОК (встроено в PULSAR 2.3)
--- =====================================================================
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 
-local VisualHeartbeat = nil
-local Updaters = {}
-
-local function AddUpdater(fn)
-    Updaters[#Updaters + 1] = fn
-    if not VisualHeartbeat then
-        VisualHeartbeat = RunService.Heartbeat:Connect(function(dt)
-            for i = 1, #Updaters do
-                pcall(Updaters[i], dt)
-            end
-        end)
-    end
-end
-
--- =====================================================================
--- ШЕЙДЕРЫ
--- =====================================================================
 local ShaderPresets = {
     ["Scarlet Atmosphere"] = {
         Lighting = { Brightness=2.14, ColorShift_Bottom=Color3.fromRGB(11,0,20), ColorShift_Top=Color3.fromRGB(240,127,14), OutdoorAmbient=Color3.fromRGB(34,0,49), ClockTime=6.7, FogColor=Color3.fromRGB(94,76,106), FogEnd=1000, FogStart=0, ExposureCompensation=0.24, ShadowSoftness=0, Ambient=Color3.fromRGB(59,33,27) },
@@ -492,7 +464,8 @@ local ShaderPresets = {
         Bloom={Intensity=0.9,Threshold=0.75,Size=70}, Blur={Size=0.35},
         ColorCorrection={Brightness=0.06,Saturation=0.18,Contrast=0.17,TintColor=Color3.fromRGB(255,230,255)},
         SunRays={Intensity=0.08,Spread=0.65},
-        Atmosphere={Density=0.28,Offset=0.15,Haze=1.4,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},    },
+        Atmosphere={Density=0.28,Offset=0.15,Haze=1.4,Glare=0.15,Color=Color3.fromRGB(200,210,255),Decay=Color3.fromRGB(100,110,130)},
+    },
     ["Синтвейв"] = {
         Lighting = { Brightness=2.3, ClockTime=18.3, FogEnd=3500, FogStart=0, FogColor=Color3.fromRGB(180,80,200), ExposureCompensation=0.15, ShadowSoftness=0.3, Ambient=Color3.fromRGB(90,40,120), ColorShift_Bottom=Color3.fromRGB(70,0,95), ColorShift_Top=Color3.fromRGB(255,110,230), OutdoorAmbient=Color3.fromRGB(150,60,140) },
         Bloom={Intensity=0.9,Threshold=0.75,Size=60},
@@ -696,15 +669,13 @@ local function RemoveShader()
     ShaderState.Active = false
 end
 
--- =====================================================================
--- ЗВУКОВЫЙ СЕРВИС (используется Mute-категориями ниже)
--- =====================================================================
 local SoundService = game:GetService("SoundService")
 
 local PulsarSoundMuteOff
 local GfxUnload
 local PulsarMusicStop
 local PulsarCustomSkyOff
+local PulsarWaterOff
 
 local function VisualsCleanup()
     if PulsarSoundMuteOff then pcall(PulsarSoundMuteOff) end
@@ -712,11 +683,7 @@ local function VisualsCleanup()
     if PulsarCustomSkyOff then pcall(PulsarCustomSkyOff) end
     if GfxUnload then pcall(GfxUnload) end
     if PulsarMusicStop then pcall(PulsarMusicStop) end
-    Updaters = {}
-    if VisualHeartbeat then
-        VisualHeartbeat:Disconnect()
-        VisualHeartbeat = nil
-    end
+    if PulsarWaterOff then pcall(PulsarWaterOff) end
     pcall(function() LockGui:Destroy() end)
 end
 
@@ -724,9 +691,6 @@ pcall(function()
     Library:OnUnload(VisualsCleanup)
 end)
 
--- =====================================================================
--- ВКЛАДКА MUSIC — плеер с сохранёнными треками (публичные аудио Roblox)
--- =====================================================================
 local MusicTracks = {
     ["TOMA FUNK PHONK"] = 129098116998483,
     ["AURA = ∞ (Brazilian Phonk)"] = 95131770144654,
@@ -789,29 +753,6 @@ local MusicTracks = {
 local MusicPlayer = { Sound = nil, Track = nil, Volume = 50, Paused = false, CustomName = nil }
 local MusicPlayBtn, NowPlayingLabel = nil, nil
 local MusicPlay = nil
-
-local MusicHeadOn = false
-local function MusicHeadAttach()
-    pcall(function()
-        local s = MusicPlayer.Sound
-        local char = LocalPlayer.Character
-        local head = char and char:FindFirstChild("Head")
-        if MusicHeadOn and s and head then
-            s.Parent = head
-            s.RollOffMode = Enum.RollOffMode.InverseTapered
-            s.RollOffMaxDistance = 60
-        end
-    end)
-end
-local function MusicHeadDetach()
-    pcall(function()
-        local s = MusicPlayer.Sound
-        if s then
-            s.Parent = SoundService
-            s.RollOffMaxDistance = 10000
-        end
-    end)
-end
 
 local function SetPlayBtnText(text)
     if MusicPlayBtn then
@@ -893,7 +834,6 @@ function MusicPlay()
     MusicPlayer.Paused = false
     s:Play()
     SetPlayBtnText("| |")
-    if MusicHeadOn then task.spawn(MusicHeadAttach) end
 end
 
 local MusicGroup = TabObjects["Music"]:AddLeftGroupbox("Плеер")
@@ -944,15 +884,6 @@ MusicGroup:AddSlider("PulsarMusicVolume", {
     end,
 })
 
-MusicGroup:AddToggle("PulsarMusicHead", {
-    Text = "🔊 Музыка над головой (слышат рядом)",
-    Default = false,
-    Callback = function(on)
-        MusicHeadOn = on
-        if on then MusicHeadAttach() else MusicHeadDetach() end
-    end,
-})
-
 MusicGroup:AddInput("PulsarMusicCustomId", {
     Text = "Свой трек (ID)",
     Placeholder = "Вставь ID аудио…",
@@ -985,7 +916,6 @@ MusicGroup:AddButton({
         MusicPlayer.CustomName = "Свой трек (ID: " .. id .. ")"
         s:Play()
         SetPlayBtnText("| |")
-        if MusicHeadOn then task.spawn(MusicHeadAttach) end
     end,
 })
 
@@ -1017,12 +947,8 @@ MusicGroup:AddToggle("PulsarVoiceBroadcast", {
     end,
 })
 
--- =====================================================================
--- ВКЛАДКА VISUAL (управление через Obsidian)
--- =====================================================================
 local VisualTab = TabObjects["Visual"]
 
--- SHADERS (верх вкладки Visual)
 local currentShader = "Scarlet Atmosphere"
 local currentLevel = 8
 
@@ -1063,114 +989,15 @@ ShaderGroup:AddToggle("SavitarShaderOn", {
     end,
 })
 
--- =====================================================================
--- КАСТОМНОЕ НЕБО (левая колонка, под Shaders) — настоящее небо через Sky
--- =====================================================================
--- Настоящее небо: объект Sky (рисуется «на бесконечности») — вся карта видна всегда,
--- ничего не двигается. Только ID-КАРТИНКИ (Image), декали в Sky не показываются.
 local CustomSkySets = {
     ["☁️ Голубые облака"] = { Bk = 225469345, Dn = 225469349, Ft = 225469359, Lf = 225469364, Rt = 225469372, Up = 225469380 },
     ["🌇 Закат с холмами"] = { Bk = 92464172, Dn = 92464250, Ft = 92464217, Lf = 92464234, Rt = 92464189, Up = 92464157 },
-    ["🧱 MC-небо (квадратное)"] = { MC = true },
 }
-local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами", "🧱 MC-небо (квадратное)" }
+local CustomSkyOrder = { "☁️ Голубые облака", "🌇 Закат с холмами" }
 
 local CustomSkyState = { Sky = nil, Backup = nil }
-local MCState = { Root = nil, Sun = nil, Conn = nil, SavedClouds = {}, SavedSky = nil }
-
-local function MCSkyRemove()
-    if MCState.Conn then pcall(function() MCState.Conn:Disconnect() end) MCState.Conn = nil end
-    if MCState.Sun then pcall(function() MCState.Sun:Destroy() end) MCState.Sun = nil end
-    if MCState.Root then pcall(function() MCState.Root:Destroy() end) MCState.Root = nil end
-    for c, _ in pairs(MCState.SavedClouds) do
-        pcall(function() c.Enabled = true end)
-    end
-    MCState.SavedClouds = {}
-    if MCState.SavedSky then
-        pcall(function() MCState.SavedSky.CelestialBodiesShown = true end)
-        MCState.SavedSky = nil
-    end
-end
-
-local function MCSkyApply()
-    if MCState.Root and MCState.Root.Parent then return true end
-    pcall(function()
-        for _, c in ipairs(workspace.Terrain:GetChildren()) do
-            if c:IsA("Clouds") and c.Enabled then
-                MCState.SavedClouds[c] = true
-                c.Enabled = false
-            end
-        end
-        local base = Lighting:FindFirstChildOfClass("Sky")
-        if base and base.CelestialBodiesShown then
-            base.CelestialBodiesShown = false
-            MCState.SavedSky = base
-        end
-    end)
-    local ok, root = pcall(function()
-        local model = Instance.new("Model")
-        model.Name = "PulsarMCSky"
-        local cell, th, radius, height = 96, 8, 10, 340
-        for cx = -radius, radius do
-            for cz = -radius, radius do
-                local n = (cx * 31 + cz * 17) % 10
-                if n >= 4 then
-                    local p = Instance.new("Part")
-                    p.Size = Vector3.new(cell, th, cell)
-                    p.Position = Vector3.new(cx * cell, height + (n % 2) * 3, cz * cell)
-                    p.Anchored = true
-                    p.CanCollide = false
-                    p.CanQuery = false
-                    p.CanTouch = false
-                    p.CastShadow = false
-                    p.Material = Enum.Material.SmoothPlastic
-                    p.Color = Color3.new(1, 1, 1)
-                    p.Transparency = 0.15
-                    p.Parent = model
-                end
-            end
-        end
-        model.Parent = workspace
-        return model
-    end)
-    if not ok or not root then
-        MCSkyRemove()
-        return false
-    end
-    MCState.Root = root
-    local okSun, sun = pcall(function()
-        local sp = Instance.new("Part")
-        sp.Name = "PulsarMCSun"
-        sp.Size = Vector3.new(90, 90, 1)
-        sp.Anchored = true
-        sp.CanCollide = false
-        sp.CanQuery = false
-        sp.CanTouch = false
-        sp.CastShadow = false
-        sp.Material = Enum.Material.Neon
-        sp.Color = Color3.fromRGB(255, 235, 160)
-        sp.Parent = workspace
-        return sp
-    end)
-    if not okSun or not sun then
-        MCSkyRemove()
-        return false
-    end
-    MCState.Sun = sun
-    MCState.Conn = RunService.Heartbeat:Connect(function()
-        local cam = workspace.CurrentCamera
-        if cam and sun.Parent then
-            local dir = Vector3.new(0.45, 0.6, 0.25).Unit
-            pcall(function()
-                sun.CFrame = CFrame.lookAt(cam.CFrame.Position + dir * 900, cam.CFrame.Position)
-            end)
-        end
-    end)
-    return true
-end
 
 local function CustomSkyRemove()
-    if MCSkyRemove then pcall(MCSkyRemove) end
     if CustomSkyState.Sky then
         pcall(function() CustomSkyState.Sky:Destroy() end)
         CustomSkyState.Sky = nil
@@ -1189,11 +1016,8 @@ end
 PulsarCustomSkyOff = CustomSkyRemove
 
 local function CustomSkyApply(faces)
-    if not faces then return false end
+    if not faces then return end
     CustomSkyRemove()
-    if faces.MC then
-        return MCSkyApply()
-    end
     pcall(function()
         local old = Lighting:FindFirstChildOfClass("Sky")
         if old then
@@ -1216,7 +1040,6 @@ local function CustomSkyApply(faces)
     sky.SkyboxUp = "rbxassetid://" .. faces.Up
     sky.Parent = Lighting
     CustomSkyState.Sky = sky
-    return true
 end
 
 local CustomSkyGroup = VisualTab:AddLeftGroupbox("Настоящее небо")
@@ -1255,12 +1078,8 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
                 pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
                 return
             end
-            if CustomSkyApply(faces) then
-                Library:Notify("Небо поставлено — вся карта видна")
-            else
-                Library:Notify("Не удалось создать MC-небо")
-                pcall(function() Library.Options.PulsarCustomSkyOn:SetValue(false) end)
-            end
+            CustomSkyApply(faces)
+            Library:Notify("Небо поставлено — вся карта видна")
         else
             CustomSkyRemove()
             Library:Notify("Своё прежнее небо возвращено")
@@ -1268,10 +1087,6 @@ CustomSkyGroup:AddToggle("PulsarCustomSkyOn", {
     end,
 })
 
-
--- =====================================================================
--- ЗВУКИ (вкладка Music, правая колонка) — категории Mute
--- =====================================================================
 local SoundMuteCatGroup = TabObjects["Music"]:AddRightGroupbox("Звуки")
 local MuteSoundConn = nil
 local MutedOriginals = {}
@@ -1451,9 +1266,6 @@ for _, cat in ipairs(SoundCategories) do
     })
 end
 
--- =====================================================================
--- VISUAL — GRAPHICS (скопировано с Resonance 2.9 — окно Graphics вкладки Visual)
--- =====================================================================
 do
 
     local GfxWaterTimeSlice = 0.1
@@ -1913,9 +1725,6 @@ do
     end
 end
 
--- =====================================================================
--- ТУМАН (вкладка Visual, правая колонка, под Graphics)
--- =====================================================================
 local FogGroup = VisualTab:AddRightGroupbox("Туман")
 local FogState = { On = false, Density = 5, Saved = false, Color = Color3.fromRGB(200, 200, 200), OldStart = 0, OldEnd = 100000, OldColor = Color3.new(1, 1, 1) }
 local function FogApply()
@@ -1962,9 +1771,78 @@ FogGroup:AddSlider("PulsarFogDensity", {
 })
 pcall(function() Library:OnUnload(FogRestore) end)
 
--- =====================================================================
--- ВКЛАДКА LISTS — ЧАТ PULSAR (ntfy.sh): слева ввод, справа сообщения
--- =====================================================================
+local WaterGroup = VisualTab:AddRightGroupbox("Вода")
+
+local WaterState = { Touched = {}, Conn = nil }
+
+local function IsWater(inst)
+    if not inst:IsA("BasePart") then return false end
+    if inst:IsA("Terrain") then return false end
+    local n = string.lower(inst.Name)
+    if string.find(n, "water", 1, true) then return true end
+    if string.find(n, "sea", 1, true) then return true end
+    if string.find(n, "ocean", 1, true) then return true end
+    if string.find(n, "wave", 1, true) then return true end
+    return false
+end
+
+local function WaterSetSolid(solid)
+    if solid then
+        table.clear(WaterState.Touched)
+        local t0 = os.clock()
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if IsWater(obj) and obj.CanCollide == false then
+                pcall(function()
+                    WaterState.Touched[obj] = false
+                    obj.CanCollide = true
+                end)
+            end
+            if os.clock() - t0 > 0.1 then
+                task.wait()
+                t0 = os.clock()
+            end
+        end
+        if not WaterState.Conn then
+            WaterState.Conn = workspace.DescendantAdded:Connect(function(obj)
+                task.defer(function()
+                    if WaterState.Conn and IsWater(obj) and obj.CanCollide == false then
+                        pcall(function()
+                            WaterState.Touched[obj] = false
+                            obj.CanCollide = true
+                        end)
+                    end
+                end)
+            end)
+        end
+    else
+        if WaterState.Conn then
+            pcall(function() WaterState.Conn:Disconnect() end)
+            WaterState.Conn = nil
+        end
+        for obj, _prev in pairs(WaterState.Touched) do
+            if typeof(obj) == "Instance" and obj.Parent then
+                pcall(function() obj.CanCollide = false end)
+            end
+        end
+        table.clear(WaterState.Touched)
+    end
+end
+PulsarWaterOff = function() WaterSetSolid(false) end
+
+WaterGroup:AddToggle("PulsarWaterSolid", {
+    Text = "Сделать воду физичной",
+    Default = false,
+    Callback = function(on)
+        if on then
+            WaterSetSolid(true)
+            Library:Notify("Вода твёрдая — попробуй наступить на неё")
+        else
+            WaterSetSolid(false)
+            Library:Notify("Вода снова нефизичная")
+        end
+    end,
+})
+
 do
     local HttpService = game:GetService("HttpService")
     local CHAT_TOPIC = "pulsar23-chat-k7f2q9xw"
@@ -2180,138 +2058,5 @@ do
 
     pcall(function()
         Library:OnUnload(StopPolling)
-    end)
-end
-
--- =====================================================================
--- ВКЛАДКА PLAYER
--- =====================================================================
-do
-    local UIS = game:GetService("UserInputService")
-    local MoveGroup = TabObjects["Player"]:AddLeftGroupbox("Движение")
-
-    local WalkSpeed, JumpPower, FlySpeed = 16, 50, 50
-    local FlyOn, FlyConn = false, nil
-    local FlyBtn, SpeedBtn, JumpBtn
-    local SpeedOn, JumpOn = false, false
-
-    local function GetHumanoid()
-        local char = LocalPlayer.Character
-        return char and char:FindFirstChildOfClass("Humanoid")
-    end
-
-    local function FlySet(on)
-        FlyOn = on
-        if FlyConn then pcall(function() FlyConn:Disconnect() end) FlyConn = nil end
-        pcall(function()
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if root then
-                for _, n in ipairs(root:GetChildren()) do
-                    if n.Name == "PulsarFlyGyro" or n.Name == "PulsarFlyVel" then n:Destroy() end
-                end
-            end
-            if hum then hum.PlatformStand = false end
-        end)
-        if on then
-            FlyConn = RunService.Heartbeat:Connect(function()
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    local root = char and char:FindFirstChild("HumanoidRootPart")
-                    local hum = char and char:FindFirstChildOfClass("Humanoid")
-                    local cam = workspace.CurrentCamera
-                    if not (root and hum and cam) then return end
-                    hum.PlatformStand = true
-                    local gyro = root:FindFirstChild("PulsarFlyGyro")
-                    local vel = root:FindFirstChild("PulsarFlyVel")
-                    if not gyro then
-                        gyro = Instance.new("BodyGyro")
-                        gyro.Name = "PulsarFlyGyro"
-                        gyro.P = 9e4
-                        gyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-                        gyro.Parent = root
-                    end
-                    if not vel then
-                        vel = Instance.new("BodyVelocity")
-                        vel.Name = "PulsarFlyVel"
-                        vel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-                        vel.Parent = root
-                    end
-                    local cf = cam.CFrame
-                    local move = Vector3.zero
-                    if UIS:IsKeyDown(Enum.KeyCode.W) then move += cf.LookVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cf.LookVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cf.RightVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.D) then move += cf.RightVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.Space) then move += cf.UpVector end
-                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then move -= cf.UpVector end
-                    vel.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.zero
-                    gyro.CFrame = CFrame.new(root.Position, root.Position + cf.LookVector)
-                end)
-            end)
-        end
-    end
-
-    RunService.Heartbeat:Connect(function()
-        pcall(function()
-            local h = GetHumanoid()
-            if h then
-                if SpeedOn then h.WalkSpeed = WalkSpeed end
-                if JumpOn then
-                    h.UseJumpPower = true
-                    h.JumpPower = JumpPower
-                end
-            end
-        end)
-    end)
-
-    MoveGroup:AddSlider("PulsarWalkSpeed", { Text = "Скорость", Default = 16, Min = 8, Max = 200, Rounding = 0, Callback = function(v) WalkSpeed = v end })
-
-    MoveGroup:AddSlider("PulsarJumpPower", { Text = "Прыжок", Default = 50, Min = 50, Max = 300, Rounding = 0, Callback = function(v) JumpPower = v end })
-
-    MoveGroup:AddSlider("PulsarFlySpeed", { Text = "Скорость флая", Default = 50, Min = 10, Max = 300, Rounding = 0, Callback = function(v) FlySpeed = v end })
-
-    pcall(function() MoveGroup:AddDivider() end)
-
-    SpeedBtn = MoveGroup:AddButton({
-        Text = "⚡ Скорость: ВЫКЛ",
-        Func = function()
-            SpeedOn = not SpeedOn
-            pcall(function() SpeedBtn:SetText(SpeedOn and "⚡ Скорость: ВКЛ" or "⚡ Скорость: ВЫКЛ") end)
-            Library:Notify(SpeedOn and ("Скорость: " .. WalkSpeed) or "Скорость выключена")
-        end,
-    })
-
-    JumpBtn = MoveGroup:AddButton({
-        Text = "⬆ Прыжок: ВЫКЛ",
-        Func = function()
-            JumpOn = not JumpOn
-            pcall(function() JumpBtn:SetText(JumpOn and "⬆ Прыжок: ВКЛ" or "⬆ Прыжок: ВЫКЛ") end)
-            Library:Notify(JumpOn and ("Прыжок: " .. JumpPower) or "Прыжок выключен")
-        end,
-    })
-
-    FlyBtn = MoveGroup:AddButton({
-        Text = "🕊 Флай: ВЫКЛ",
-        Func = function()
-            FlySet(not FlyOn)
-            pcall(function() FlyBtn:SetText(FlyOn and "🕊 Флай: ВКЛ" or "🕊 Флай: ВЫКЛ") end)
-        end,
-    })
-
-    LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        pcall(function()
-            local h = GetHumanoid()
-            if h and SpeedOn then h.WalkSpeed = WalkSpeed end
-            if h and JumpOn then h.UseJumpPower = true h.JumpPower = JumpPower end
-        end)
-    end)
-
-    pcall(function()
-        Library:OnUnload(function()
-            if FlyOn then FlySet(false) end
-        end)
     end)
 end
